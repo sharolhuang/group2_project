@@ -130,13 +130,13 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable = False
         self.invulnerable_time = 0
         self.invulnerable_duration = 5000
-
+        
     def update(self):
         now = pygame.time.get_ticks()
-        if self.invulnerable and pygame.time.get_ticks() - self.invulnerable_time > self.invulnerable_duration:
+        if self.invulnerable and now - self.invulnerable_time > self.invulnerable_duration:
             self.invulnerable = False
 
-        if self.gun > 1 and now - self.gun_time > 5000:
+        if self.gun > 1 and now - self.gun_time > 10000:
             self.gun -= 1
             self.gun_time = now
 
@@ -164,13 +164,24 @@ class Player(pygame.sprite.Sprite):
                 all_sprites.add(bullet)
                 bullets.add(bullet)
                 shoot_sound.play()
-            elif self.gun >=2:
+            elif self.gun ==2:
                 bullet1 = Bullet(self.rect.left, self.rect.centery)
                 bullet2 = Bullet(self.rect.right, self.rect.centery)
                 all_sprites.add(bullet1)
                 all_sprites.add(bullet2)
                 bullets.add(bullet1)
                 bullets.add(bullet2)
+                shoot_sound.play()
+            elif self.gun >=3:
+                bullet1 = Bullet(self.rect.left, self.rect.centery)
+                bullet2 = Bullet(self.rect.centerx, self.rect.centery)
+                bullet3 = Bullet(self.rect.right, self.rect.centery)
+                all_sprites.add(bullet1)
+                all_sprites.add(bullet2)
+                all_sprites.add(bullet3)
+                bullets.add(bullet1)
+                bullets.add(bullet2)
+                bullets.add(bullet3)
                 shoot_sound.play()
 
     def hide(self):
@@ -179,7 +190,15 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (WIDTH/2, HEIGHT+500)
 
     def gunup(self):
-        self.gun += 1
+        if self.gun < 3:
+            self.gun += 1
+            self.gun_time = pygame.time.get_ticks()
+
+    def upgrade_gun(self):
+        if self.gun == 1:
+            self.gun = 2
+        elif self.gun == 2:
+            self.gun = 3
         self.gun_time = pygame.time.get_ticks()
 
     def set_invulnerable(self):
@@ -318,7 +337,7 @@ while running:
         score += hit.radius
         expl = Explosion(hit.rect.center, 'lg')
         all_sprites.add(expl)
-        if random.random() > 0.9:
+        if random.random() > 0.5:
             pow = Power(hit.rect.center)
             all_sprites.add(pow)
             powers.add(pow)
@@ -339,7 +358,9 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            
+            if not player.invulnerable:  # 新增的條件判斷
+                player.gun = 1
+
     # 判斷寶物 飛船相撞
     hits = pygame.sprite.spritecollide(player, powers, True)
     for hit in hits:
@@ -349,7 +370,7 @@ while running:
                 player.health = 100
             shield_sound.play()
         elif hit.type == 'gun':
-            player.gunup()
+            player.upgrade_gun()
             gun_sound.play()
         elif hit.type == 'shield':
             player.set_invulnerable()
