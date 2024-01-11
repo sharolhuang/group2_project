@@ -130,6 +130,7 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable = False
         self.invulnerable_time = 0
         self.invulnerable_duration = 5000
+        self.shoot_delay_events = []
         
     def update(self):
         now = pygame.time.get_ticks()
@@ -156,6 +157,20 @@ class Player(pygame.sprite.Sprite):
         if self.rect.left < 0:
             self.rect.left = 0
         
+        current_time = pygame.time.get_ticks()
+        # 检查所有射击延迟事件
+        for event in self.shoot_delay_events[:]:
+            event_time, event_type = event
+            if current_time - event_time >= FPS * 0.1:  # 0.1秒后
+                if event_type == 'side_bullets':
+                    # 发射左右两侧的子弹
+                    bullet1 = Bullet(self.rect.left, self.rect.top)
+                    bullet3 = Bullet(self.rect.right, self.rect.top)
+                    all_sprites.add(bullet1)
+                    all_sprites.add(bullet3)
+                    bullets.add(bullet1)
+                    bullets.add(bullet3)
+                self.shoot_delay_events.remove(event)  # 移除处理过的事件
 
     def shoot(self):
         if not(self.hidden):
@@ -173,15 +188,13 @@ class Player(pygame.sprite.Sprite):
                 bullets.add(bullet2)
                 shoot_sound.play()
             elif self.gun >=3:
-                bullet1 = Bullet(self.rect.left, self.rect.centery)
-                bullet2 = Bullet(self.rect.centerx, self.rect.centery)
-                bullet3 = Bullet(self.rect.right, self.rect.centery)
-                all_sprites.add(bullet1)
+                # 发射中间的子弹
+                bullet2 = Bullet(self.rect.centerx, self.rect.top)
                 all_sprites.add(bullet2)
-                all_sprites.add(bullet3)
-                bullets.add(bullet1)
                 bullets.add(bullet2)
-                bullets.add(bullet3)
+                # 添加新的射击延迟事件
+                current_time = pygame.time.get_ticks()
+                self.shoot_delay_events.append((current_time, 'side_bullets'))
                 shoot_sound.play()
 
     def hide(self):
