@@ -1,6 +1,6 @@
 # 太空生存戰
 import pygame
-import random 
+import random
 import os
 
 FPS = 60 
@@ -17,7 +17,7 @@ YELLOW = (255, 255, 0)
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("第一個遊戲")
+pygame.display.set_caption("太空生存戰")
 clock = pygame.time.Clock()
 
 # 載入圖片
@@ -43,8 +43,10 @@ for i in range(9):
     player_expl_img.set_colorkey(BLACK)
     expl_anim['player'].append(player_expl_img)
 power_imgs = {}
-power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
+power_imgs['heart'] = pygame.image.load(os.path.join("img", "heart.png")).convert()
+power_imgs['heart'] = pygame.transform.scale(power_imgs['heart'], (50, 50))
 power_imgs['gun'] = pygame.image.load(os.path.join("img", "gun.png")).convert()
+power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
 
 # 載入音樂、音效
 shoot_sound = pygame.mixer.Sound(os.path.join("sound", "shoot.wav"))
@@ -94,7 +96,7 @@ def draw_init():
     screen.blit(background_img, (0,0))
     draw_text(screen, '太空生存戰!', 64, WIDTH/2, HEIGHT/4)
     draw_text(screen, '← →移動飛船 空白鍵發射子彈~', 22, WIDTH/2, HEIGHT/2)
-    draw_text(screen, '按任意鍵開始遊戲!', 18, WIDTH/2, HEIGHT*3/4)
+    draw_text(screen, '按shift鍵開始遊戲!', 18, WIDTH/2, HEIGHT*3/4)
     pygame.display.update()
     waiting = True
     while waiting:
@@ -125,9 +127,15 @@ class Player(pygame.sprite.Sprite):
         self.hide_time = 0
         self.gun = 1
         self.gun_time = 0
+        self.invulnerable = False
+        self.invulnerable_time = 0
+        self.invulnerable_duration = 5000
 
     def update(self):
         now = pygame.time.get_ticks()
+        if self.invulnerable and pygame.time.get_ticks() - self.invulnerable_time > self.invulnerable_duration:
+            self.invulnerable = False
+
         if self.gun > 1 and now - self.gun_time > 5000:
             self.gun -= 1
             self.gun_time = now
@@ -147,6 +155,7 @@ class Player(pygame.sprite.Sprite):
             self.rect.right = WIDTH
         if self.rect.left < 0:
             self.rect.left = 0
+        
 
     def shoot(self):
         if not(self.hidden):
@@ -172,6 +181,14 @@ class Player(pygame.sprite.Sprite):
     def gunup(self):
         self.gun += 1
         self.gun_time = pygame.time.get_ticks()
+
+    def set_invulnerable(self):
+        self.invulnerable = True
+        self.invulnerable_time = pygame.time.get_ticks()
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)
+        if self.invulnerable:
+            pygame.draw.circle(surf, WHITE, self.rect.center, self.radius + 10, 2)
 
 class Rock(pygame.sprite.Sprite):
     def __init__(self):
@@ -249,7 +266,7 @@ class Explosion(pygame.sprite.Sprite):
 class Power(pygame.sprite.Sprite):
     def __init__(self, center):
         pygame.sprite.Sprite.__init__(self)
-        self.type = random.choice(['shield', 'gun'])
+        self.type = random.choice(['heart', 'gun', 'shield'])
         self.image = power_imgs[self.type]
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
@@ -308,24 +325,25 @@ while running:
         new_rock()
 
     # 判斷石頭 飛船相撞
-    hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
-    for hit in hits:
-        new_rock()
-        player.health -= hit.radius * 2
-        expl = Explosion(hit.rect.center, 'sm')
-        all_sprites.add(expl)
-        if player.health <= 0:
-            death_expl = Explosion(player.rect.center, 'player')
-            all_sprites.add(death_expl)
-            die_sound.play()
-            player.lives -= 1
-            player.health = 100
-            player.hide()
+    if not player.invulnerable:
+        hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
+        for hit in hits:
+            new_rock()
+            player.health -= hit.radius * 2
+            expl = Explosion(hit.rect.center, 'sm')
+            all_sprites.add(expl)
+            if player.health <= 0:
+                death_expl = Explosion(player.rect.center, 'player')
+                all_sprites.add(death_expl)
+                die_sound.play()
+                player.lives -= 1
+                player.health = 100
+                player.hide()
             
     # 判斷寶物 飛船相撞
     hits = pygame.sprite.spritecollide(player, powers, True)
     for hit in hits:
-        if hit.type == 'shield':
+        if hit.type == 'heart':
             player.health += 20
             if player.health > 100:
                 player.health = 100
@@ -333,6 +351,8 @@ while running:
         elif hit.type == 'gun':
             player.gunup()
             gun_sound.play()
+        elif hit.type == 'shield':
+            player.set_invulnerable()
 
     if player.lives == 0 and not(death_expl.alive()):
         show_init = True
@@ -340,7 +360,8 @@ while running:
     # 畫面顯示
     screen.fill(BLACK)
     screen.blit(background_img, (0,0))
-    all_sprites.draw(screen)
+    for entity in all_sprites:
+        entity.draw(screen) if hasattr(entity, 'draw') else screen.blit(entity.image, entity.rect)
     draw_text(screen, str(score), 18, WIDTH/2, 10)
     draw_health(screen, player.health, 5, 15)
     draw_lives(screen, player.lives, player_mini_img, WIDTH - 100, 15)
