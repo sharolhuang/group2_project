@@ -47,6 +47,8 @@ power_imgs['heart'] = pygame.image.load(os.path.join("img", "heart.png")).conver
 power_imgs['heart'] = pygame.transform.scale(power_imgs['heart'], (50, 50))
 power_imgs['gun'] = pygame.image.load(os.path.join("img", "gun.png")).convert()
 power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
+power_imgs['snowflower'] = pygame.image.load(os.path.join("img", "snowflower.png")).convert()
+power_imgs['snowflower'] = pygame.transform.scale(power_imgs['snowflower'], (50, 50))
 
 # 載入音樂、音效
 shoot_sound = pygame.mixer.Sound(os.path.join("sound", "shoot.wav"))
@@ -130,6 +132,7 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable = False
         self.invulnerable_time = 0
         self.invulnerable_duration = 5000
+        self.snowflower_effect_time = 0
         self.shoot_delay_events = []
         
     def update(self):
@@ -140,6 +143,12 @@ class Player(pygame.sprite.Sprite):
         if self.gun > 1 and now - self.gun_time > 10000:
             self.gun -= 1
             self.gun_time = now
+
+        if self.snowflower_effect_time > 0:
+            if pygame.time.get_ticks() - self.snowflower_effect_time > 5000:
+                self.snowflower_effect_time = 0
+                for rock in rocks:
+                    rock.set_speed(1)  # 恢复正常速度
 
         if self.hidden and now - self.hide_time > 1000:
             self.hidden = False
@@ -217,10 +226,16 @@ class Player(pygame.sprite.Sprite):
     def set_invulnerable(self):
         self.invulnerable = True
         self.invulnerable_time = pygame.time.get_ticks()
+    
     def draw(self, surf):
         surf.blit(self.image, self.rect)
         if self.invulnerable:
             pygame.draw.circle(surf, WHITE, self.rect.center, self.radius + 10, 2)
+
+    def hit_snowflower(self):
+        self.snowflower_effect_time = pygame.time.get_ticks()
+        for rock in rocks:
+            rock.set_speed(0.1)  # 降低速度
 
 class Rock(pygame.sprite.Sprite):
     def __init__(self):
@@ -233,10 +248,14 @@ class Rock(pygame.sprite.Sprite):
         # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.x = random.randrange(0, WIDTH - self.rect.width)
         self.rect.y = random.randrange(-180, -100)
-        self.speedy = random.randrange(2, 5)
+        self.original_speedy = random.randrange(2, 5)  # 原始速度
+        self.speedy = self.original_speedy
         self.speedx = random.randrange(-3, 3)
         self.total_degree = 0
         self.rot_degree = random.randrange(-3, 3)
+
+    def set_speed(self, speed_factor):
+        self.speedy = self.original_speedy * speed_factor
 
     def rotate(self):
         self.total_degree += self.rot_degree
@@ -298,7 +317,7 @@ class Explosion(pygame.sprite.Sprite):
 class Power(pygame.sprite.Sprite):
     def __init__(self, center):
         pygame.sprite.Sprite.__init__(self)
-        self.type = random.choice(['heart', 'gun', 'shield'])
+        self.type = random.choice(['heart', 'gun', 'shield', 'snowflower'])
         self.image = power_imgs[self.type]
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
@@ -387,6 +406,8 @@ while running:
             gun_sound.play()
         elif hit.type == 'shield':
             player.set_invulnerable()
+        elif hit.type == 'snowflower':
+            player.hit_snowflower()
 
     if player.lives == 0 and not(death_expl.alive()):
         show_init = True
