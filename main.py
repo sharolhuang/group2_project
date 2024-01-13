@@ -19,6 +19,7 @@ pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("太空生存戰")
 clock = pygame.time.Clock()
+score_numbers = pygame.sprite.Group()
 
 # 載入圖片
 background_img = pygame.image.load(os.path.join("img", "background.png")).convert()
@@ -63,6 +64,7 @@ pygame.mixer.music.load(os.path.join("sound", "background.ogg"))
 pygame.mixer.music.set_volume(0.4)
 
 font_name = os.path.join("font.ttf")
+font = pygame.font.Font(font_name, 20)
 def draw_text(surf, text, size, x, y):
     font = pygame.font.Font(font_name, size)
     text_surface = font.render(text, True, WHITE)
@@ -329,6 +331,20 @@ class Power(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
+class ScoreNumber(pygame.sprite.Sprite):
+    def __init__(self, x, y, value):
+        pygame.sprite.Sprite.__init__(self)
+        self.value = value
+        self.image = font.render(str(value), True, YELLOW)  # 显示传入的数值
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedy = 2  # 数字下降速度
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT:
+            self.kill()  # 数字移出屏幕后消失
 
 pygame.mixer.music.play(-1)
 
@@ -352,6 +368,12 @@ while running:
         score = 0
     
     clock.tick(FPS)
+    
+    if random.random() < 0.01:  # 每帧有 1% 的概率生成一个 Power 对象
+        new_power = Power((random.randint(0, WIDTH), -20))  # 在屏幕顶部随机位置生成
+        all_sprites.add(new_power)
+        powers.add(new_power)
+    
     # 取得輸入
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -362,17 +384,18 @@ while running:
 
     # 更新遊戲
     all_sprites.update()
+    score_numbers.update()
     # 判斷石頭 子彈相撞
     hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
     for hit in hits:
         random.choice(expl_sounds).play()
-        score += hit.radius
         expl = Explosion(hit.rect.center, 'lg')
         all_sprites.add(expl)
-        if random.random() > 0.5:
-            pow = Power(hit.rect.center)
-            all_sprites.add(pow)
-            powers.add(pow)
+        if random.random() < 0.3:  # 30% 的概率
+            value = random.choice([100, 200, 300, 400, 500])  # 从列表中随机选择一个数值
+            score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
+            all_sprites.add(score_number)
+            score_numbers.add(score_number)
         new_rock()
 
     # 判斷石頭 飛船相撞
@@ -411,6 +434,11 @@ while running:
 
     if player.lives == 0 and not(death_expl.alive()):
         show_init = True
+
+    # 判斷數字 飛船相撞
+    hits = pygame.sprite.spritecollide(player, score_numbers, True)
+    for hit in hits:
+        score += hit.value
 
     # 畫面顯示
     screen.fill(BLACK)
