@@ -19,6 +19,7 @@ pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("太空生存戰")
 clock = pygame.time.Clock()
+score_numbers = pygame.sprite.Group()
 
 # 載入圖片
 background_img = pygame.image.load(os.path.join("img", "background.png")).convert()
@@ -47,6 +48,8 @@ power_imgs['heart'] = pygame.image.load(os.path.join("img", "heart.png")).conver
 power_imgs['heart'] = pygame.transform.scale(power_imgs['heart'], (50, 50))
 power_imgs['gun'] = pygame.image.load(os.path.join("img", "gun.png")).convert()
 power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
+power_imgs['snowflower'] = pygame.image.load(os.path.join("img", "snowflower.png")).convert()
+power_imgs['snowflower'] = pygame.transform.scale(power_imgs['snowflower'], (50, 50))
 
 # 載入音樂、音效
 shoot_sound = pygame.mixer.Sound(os.path.join("sound", "shoot.wav"))
@@ -61,6 +64,7 @@ pygame.mixer.music.load(os.path.join("sound", "background.ogg"))
 pygame.mixer.music.set_volume(0.4)
 
 font_name = os.path.join("font.ttf")
+font = pygame.font.Font(font_name, 20)
 def draw_text(surf, text, size, x, y):
     font = pygame.font.Font(font_name, size)
     text_surface = font.render(text, True, WHITE)
@@ -130,15 +134,23 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable = False
         self.invulnerable_time = 0
         self.invulnerable_duration = 5000
-
+        self.snowflower_effect_time = 0
+        self.shoot_delay_events = []
+        
     def update(self):
         now = pygame.time.get_ticks()
-        if self.invulnerable and pygame.time.get_ticks() - self.invulnerable_time > self.invulnerable_duration:
+        if self.invulnerable and now - self.invulnerable_time > self.invulnerable_duration:
             self.invulnerable = False
 
-        if self.gun > 1 and now - self.gun_time > 5000:
+        if self.gun > 1 and now - self.gun_time > 10000:
             self.gun -= 1
             self.gun_time = now
+
+        if self.snowflower_effect_time > 0:
+            if pygame.time.get_ticks() - self.snowflower_effect_time > 5000:
+                self.snowflower_effect_time = 0
+                for rock in rocks:
+                    rock.set_speed(1)  # 恢复正常速度
 
         if self.hidden and now - self.hide_time > 1000:
             self.hidden = False
@@ -156,6 +168,20 @@ class Player(pygame.sprite.Sprite):
         if self.rect.left < 0:
             self.rect.left = 0
         
+        current_time = pygame.time.get_ticks()
+        # 检查所有射击延迟事件
+        for event in self.shoot_delay_events[:]:
+            event_time, event_type = event
+            if current_time - event_time >= FPS * 0.1:  # 0.1秒后
+                if event_type == 'side_bullets':
+                    # 发射左右两侧的子弹
+                    bullet1 = Bullet(self.rect.left, self.rect.top)
+                    bullet3 = Bullet(self.rect.right, self.rect.top)
+                    all_sprites.add(bullet1)
+                    all_sprites.add(bullet3)
+                    bullets.add(bullet1)
+                    bullets.add(bullet3)
+                self.shoot_delay_events.remove(event)  # 移除处理过的事件
 
     def shoot(self):
         if not(self.hidden):
@@ -164,13 +190,22 @@ class Player(pygame.sprite.Sprite):
                 all_sprites.add(bullet)
                 bullets.add(bullet)
                 shoot_sound.play()
-            elif self.gun >=2:
+            elif self.gun ==2:
                 bullet1 = Bullet(self.rect.left, self.rect.centery)
                 bullet2 = Bullet(self.rect.right, self.rect.centery)
                 all_sprites.add(bullet1)
                 all_sprites.add(bullet2)
                 bullets.add(bullet1)
                 bullets.add(bullet2)
+                shoot_sound.play()
+            elif self.gun >=3:
+                # 发射中间的子弹
+                bullet2 = Bullet(self.rect.centerx, self.rect.top)
+                all_sprites.add(bullet2)
+                bullets.add(bullet2)
+                # 添加新的射击延迟事件
+                current_time = pygame.time.get_ticks()
+                self.shoot_delay_events.append((current_time, 'side_bullets'))
                 shoot_sound.play()
 
     def hide(self):
@@ -179,16 +214,30 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (WIDTH/2, HEIGHT+500)
 
     def gunup(self):
-        self.gun += 1
+        if self.gun < 3:
+            self.gun += 1
+            self.gun_time = pygame.time.get_ticks()
+
+    def upgrade_gun(self):
+        if self.gun == 1:
+            self.gun = 2
+        elif self.gun == 2:
+            self.gun = 3
         self.gun_time = pygame.time.get_ticks()
 
     def set_invulnerable(self):
         self.invulnerable = True
         self.invulnerable_time = pygame.time.get_ticks()
+    
     def draw(self, surf):
         surf.blit(self.image, self.rect)
         if self.invulnerable:
             pygame.draw.circle(surf, WHITE, self.rect.center, self.radius + 10, 2)
+
+    def hit_snowflower(self):
+        self.snowflower_effect_time = pygame.time.get_ticks()
+        for rock in rocks:
+            rock.set_speed(0.1)  # 降低速度
 
 class Rock(pygame.sprite.Sprite):
     def __init__(self):
@@ -201,10 +250,14 @@ class Rock(pygame.sprite.Sprite):
         # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.x = random.randrange(0, WIDTH - self.rect.width)
         self.rect.y = random.randrange(-180, -100)
-        self.speedy = random.randrange(2, 5)
+        self.original_speedy = random.randrange(2, 5)  # 原始速度
+        self.speedy = self.original_speedy
         self.speedx = random.randrange(-3, 3)
         self.total_degree = 0
         self.rot_degree = random.randrange(-3, 3)
+
+    def set_speed(self, speed_factor):
+        self.speedy = self.original_speedy * speed_factor
 
     def rotate(self):
         self.total_degree += self.rot_degree
@@ -266,7 +319,7 @@ class Explosion(pygame.sprite.Sprite):
 class Power(pygame.sprite.Sprite):
     def __init__(self, center):
         pygame.sprite.Sprite.__init__(self)
-        self.type = random.choice(['heart', 'gun', 'shield'])
+        self.type = random.choice(['heart', 'gun', 'shield', 'snowflower'])
         self.image = power_imgs[self.type]
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
@@ -278,6 +331,20 @@ class Power(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
+class ScoreNumber(pygame.sprite.Sprite):
+    def __init__(self, x, y, value):
+        pygame.sprite.Sprite.__init__(self)
+        self.value = value
+        self.image = font.render(str(value), True, YELLOW)  # 显示传入的数值
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedy = 2  # 数字下降速度
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT:
+            self.kill()  # 数字移出屏幕后消失
 
 pygame.mixer.music.play(-1)
 
@@ -301,6 +368,12 @@ while running:
         score = 0
     
     clock.tick(FPS)
+    
+    if random.random() < 0.01:  # 每帧有 1% 的概率生成一个 Power 对象
+        new_power = Power((random.randint(0, WIDTH), -20))  # 在屏幕顶部随机位置生成
+        all_sprites.add(new_power)
+        powers.add(new_power)
+    
     # 取得輸入
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -311,17 +384,18 @@ while running:
 
     # 更新遊戲
     all_sprites.update()
+    score_numbers.update()
     # 判斷石頭 子彈相撞
     hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
     for hit in hits:
         random.choice(expl_sounds).play()
-        score += hit.radius
         expl = Explosion(hit.rect.center, 'lg')
         all_sprites.add(expl)
-        if random.random() > 0.9:
-            pow = Power(hit.rect.center)
-            all_sprites.add(pow)
-            powers.add(pow)
+        if random.random() < 0.3:  # 30% 的概率
+            value = random.choice([100, 200, 300, 400, 500])  # 从列表中随机选择一个数值
+            score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
+            all_sprites.add(score_number)
+            score_numbers.add(score_number)
         new_rock()
 
     # 判斷石頭 飛船相撞
@@ -339,7 +413,9 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            
+            if not player.invulnerable:  # 新增的條件判斷
+                player.gun = 1
+
     # 判斷寶物 飛船相撞
     hits = pygame.sprite.spritecollide(player, powers, True)
     for hit in hits:
@@ -349,13 +425,20 @@ while running:
                 player.health = 100
             shield_sound.play()
         elif hit.type == 'gun':
-            player.gunup()
+            player.upgrade_gun()
             gun_sound.play()
         elif hit.type == 'shield':
             player.set_invulnerable()
+        elif hit.type == 'snowflower':
+            player.hit_snowflower()
 
     if player.lives == 0 and not(death_expl.alive()):
         show_init = True
+
+    # 判斷數字 飛船相撞
+    hits = pygame.sprite.spritecollide(player, score_numbers, True)
+    for hit in hits:
+        score += hit.value
 
     # 畫面顯示
     screen.fill(BLACK)
