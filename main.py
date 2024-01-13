@@ -114,6 +114,21 @@ def draw_init():
                 waiting = False
                 return False
 
+def show_game_over(screen):
+    """显示游戏结束画面，并等待按键"""
+    screen.blit(background_img, (0, 0))
+    draw_text(screen, "GAME OVER", 64, WIDTH / 2, HEIGHT / 4)
+    draw_text(screen, "Press any key to restart.", 22, WIDTH / 2, HEIGHT / 2)
+    pygame.display.update()
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            if event.type == pygame.KEYDOWN:
+                waiting = False
+
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -367,6 +382,10 @@ while running:
             new_rock()
         score = 0
     
+    if player.lives == 0:
+        show_game_over(screen)
+        show_init = True
+
     clock.tick(FPS)
     
     if random.random() < 0.01:  # 每帧有 1% 的概率生成一个 Power 对象
