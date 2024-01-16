@@ -20,6 +20,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("太空生存戰")
 clock = pygame.time.Clock()
 score_numbers = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
+e_bullets = pygame.sprite.Group()
 
 # 載入圖片
 background_img = pygame.image.load(os.path.join("img", "background.png")).convert()
@@ -28,6 +30,8 @@ player_mini_img = pygame.transform.scale(player_img, (25, 19))
 player_mini_img.set_colorkey(BLACK)
 pygame.display.set_icon(player_mini_img)
 bullet_img = pygame.image.load(os.path.join("img", "bullet.png")).convert()
+enemy_img = pygame.image.load(os.path.join("img", "enemy.png")).convert_alpha()
+e_bullet_img = pygame.image.load(os.path.join("img", "e_bullet.png")).convert()
 rock_imgs = []
 for i in range(7):
     rock_imgs.append(pygame.image.load(os.path.join("img", f"rock{i}.png")).convert())
@@ -361,6 +365,45 @@ class ScoreNumber(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()  # 数字移出屏幕后消失
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
+        scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
+        self.image = scaled_image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.last_shot = pygame.time.get_ticks()
+    
+    def update(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > 2000:  # 每2秒發射一次
+            self.shoot()
+            self.last_shot = now
+
+    def shoot(self):
+        bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
+        all_sprites.add(bullet)
+        e_bullets.add(bullet)
+
+class EnemyBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(e_bullet_img, (20, 40))
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = x
+        self.rect.top = y
+        self.speedy = 5
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT:
+            self.kill()
+
+
+
 pygame.mixer.music.play(-1)
 
 # 遊戲迴圈
@@ -393,6 +436,14 @@ while running:
         all_sprites.add(new_power)
         powers.add(new_power)
     
+    if score >= 1000 and len(enemies) == 0:  # 當分數達到1000且沒有敵人時
+        enemy1 = Enemy(80, 60)
+        enemy2 = Enemy(320, 60)
+        all_sprites.add(enemy1)
+        all_sprites.add(enemy2)
+        enemies.add(enemy1)
+        enemies.add(enemy2)
+
     # 取得輸入
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -404,6 +455,8 @@ while running:
     # 更新遊戲
     all_sprites.update()
     score_numbers.update()
+    enemies.update()
+    e_bullets.update()
     # 判斷石頭 子彈相撞
     hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
     for hit in hits:
@@ -459,11 +512,29 @@ while running:
     for hit in hits:
         score += hit.value
 
+    # 判斷敵人子彈和玩家飛船的碰撞
+    hits = pygame.sprite.spritecollide(player, e_bullets, True)
+    for hit in hits:
+        if not player.invulnerable:  # 只有當飛船不是無敵模式時才受傷
+            player.health -= 20  # 或者任何適當的傷害值
+            if player.health <= 0:
+                death_expl = Explosion(player.rect.center, 'player')
+                all_sprites.add(death_expl)
+                die_sound.play()
+                player.lives -= 1
+                player.health = 100
+                player.hide()
+                player.gun = 1
+
     # 畫面顯示
     screen.fill(BLACK)
     screen.blit(background_img, (0,0))
     for entity in all_sprites:
         entity.draw(screen) if hasattr(entity, 'draw') else screen.blit(entity.image, entity.rect)
+    for entity in enemies:
+        screen.blit(entity.image, entity.rect)
+    for bullet in e_bullets:
+        screen.blit(bullet.image, bullet.rect)
     draw_text(screen, str(score), 18, WIDTH/2, 10)
     draw_health(screen, player.health, 5, 15)
     draw_lives(screen, player.lives, player_mini_img, WIDTH - 100, 15)
