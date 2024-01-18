@@ -375,6 +375,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
         self.last_shot = pygame.time.get_ticks()
+        self.health = 100
     
     def update(self):
         now = pygame.time.get_ticks()
@@ -386,6 +387,20 @@ class Enemy(pygame.sprite.Sprite):
         bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
         all_sprites.add(bullet)
         e_bullets.add(bullet)
+
+    def draw_health(self, surf):
+        if self.health > 0:
+            BAR_LENGTH = 60
+            BAR_HEIGHT = 10
+            fill = (self.health / 100) * BAR_LENGTH
+            outline_rect = pygame.Rect(self.rect.x, self.rect.y - 15, BAR_LENGTH, BAR_HEIGHT)
+            fill_rect = pygame.Rect(self.rect.x, self.rect.y - 15, fill, BAR_HEIGHT)
+            pygame.draw.rect(surf, RED, fill_rect)
+            pygame.draw.rect(surf, WHITE, outline_rect, 2)
+    
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)
+        self.draw_health(surf)
 
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -401,8 +416,6 @@ class EnemyBullet(pygame.sprite.Sprite):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT:
             self.kill()
-
-
 
 pygame.mixer.music.play(-1)
 
@@ -525,6 +538,15 @@ while running:
                 player.health = 100
                 player.hide()
                 player.gun = 1
+
+    # 檢測子彈和敵人的碰撞
+    hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
+    for hit in hits:
+        hit.health -= 20
+        if hit.health <= 0:
+            expl = Explosion(hit.rect.center, 'lg')
+            all_sprites.add(expl)
+            hit.kill()
 
     # 畫面顯示
     screen.fill(BLACK)
