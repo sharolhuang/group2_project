@@ -104,7 +104,8 @@ def draw_init():
     screen.blit(background_img, (0,0))
     draw_text(screen, '太空生存戰!', 64, WIDTH/2, HEIGHT/4)
     draw_text(screen, '← →移動飛船 空白鍵發射子彈~', 22, WIDTH/2, HEIGHT/2)
-    draw_text(screen, '按shift鍵開始遊戲!', 18, WIDTH/2, HEIGHT*3/4)
+    draw_text(screen, '按任意鍵開始遊戲!', 22, WIDTH/2, HEIGHT*3/5)
+    draw_text(screen, '(注意:請使用英文輸入法以進行遊戲)', 18, WIDTH/2, HEIGHT*3/4)
     pygame.display.update()
     waiting = True
     while waiting:
