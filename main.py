@@ -355,7 +355,7 @@ class ScoreNumber(pygame.sprite.Sprite):
     def __init__(self, x, y, value):
         pygame.sprite.Sprite.__init__(self)
         self.value = value
-        self.image = font.render(str(value), True, YELLOW)  # 显示传入的数值
+        self.image = font.render(str(value), True, YELLOW)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -364,13 +364,13 @@ class ScoreNumber(pygame.sprite.Sprite):
     def update(self):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT:
-            self.kill()  # 数字移出屏幕后消失
+            self.kill()
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, moving=False):
         pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
-        scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
+        scaled_image = pygame.transform.scale(enemy_img, (60, 45))
+        scaled_image.set_colorkey(BLACK)
         self.image = scaled_image
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -386,7 +386,7 @@ class Enemy(pygame.sprite.Sprite):
             self.shoot()
             self.last_shot = now
         
-        if self.moving:  # 只有當移動標誌為真時才移動
+        if self.moving:
             self.rect.x += self.speedx
             if self.rect.right > WIDTH:
                 self.speedx = -2
@@ -447,10 +447,6 @@ while running:
         for i in range(8):
             new_rock()
         score = 0
-    
-    if player.lives == 0:
-        show_game_over(screen)
-        show_init = True
 
     clock.tick(FPS)
     
@@ -528,7 +524,7 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            if not player.invulnerable:  # 新增的條件判斷
+            if not player.invulnerable:
                 player.gun = 1
 
     # 判斷寶物 飛船相撞
@@ -547,9 +543,6 @@ while running:
         elif hit.type == 'snowflower':
             player.hit_snowflower()
 
-    if player.lives == 0 and not(death_expl.alive()):
-        show_init = True
-
     # 判斷數字 飛船相撞
     hits = pygame.sprite.spritecollide(player, score_numbers, True)
     for hit in hits:
@@ -558,8 +551,8 @@ while running:
     # 判斷敵人子彈和玩家飛船的碰撞
     hits = pygame.sprite.spritecollide(player, e_bullets, True)
     for hit in hits:
-        if not player.invulnerable:  # 只有當飛船不是無敵模式時才受傷
-            player.health -= 20  # 或者任何適當的傷害值
+        if not player.invulnerable:
+            player.health -= 20
             if player.health <= 0:
                 death_expl = Explosion(player.rect.center, 'player')
                 all_sprites.add(death_expl)
@@ -577,6 +570,11 @@ while running:
             expl = Explosion(hit.rect.center, 'lg')
             all_sprites.add(expl)
             hit.kill()
+
+    if player.lives == 0:
+        if not death_expl.alive():
+            show_game_over(screen)
+            show_init = True
 
     # 畫面顯示
     screen.fill(BLACK)
