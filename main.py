@@ -367,7 +367,7 @@ class ScoreNumber(pygame.sprite.Sprite):
             self.kill()  # 数字移出屏幕后消失
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, moving=False):
         pygame.sprite.Sprite.__init__(self)
         scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
         scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
@@ -377,49 +377,21 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y = y
         self.last_shot = pygame.time.get_ticks()
         self.health = 100
+        self.moving = moving
+        self.speedx = 2 if moving else 0
     
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.last_shot > 2000:  # 每2秒發射一次
             self.shoot()
-            self.last_shot = now   
-
-    def shoot(self):
-        bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
-        all_sprites.add(bullet)
-        e_bullets.add(bullet)
-
-    def draw_health(self, surf):
-        if self.health > 0:
-            BAR_LENGTH = 60
-            BAR_HEIGHT = 10
-            fill = (self.health / 100) * BAR_LENGTH
-            outline_rect = pygame.Rect(self.rect.x, self.rect.y - 15, BAR_LENGTH, BAR_HEIGHT)
-            fill_rect = pygame.Rect(self.rect.x, self.rect.y - 15, fill, BAR_HEIGHT)
-            pygame.draw.rect(surf, RED, fill_rect)
-            pygame.draw.rect(surf, WHITE, outline_rect, 2)
-    
-    def draw(self, surf):
-        surf.blit(self.image, self.rect)
-        self.draw_health(surf)
-
-class EnemyLv2(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
-        scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
-        self.image = scaled_image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.last_shot = pygame.time.get_ticks()
-        self.health = 100
-    
-    def update(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_shot > 1000:  # 每1秒發射一次
-            self.shoot()
-            self.last_shot = now   
+            self.last_shot = now
+        
+        if self.moving:  # 只有當移動標誌為真時才移動
+            self.rect.x += self.speedx
+            if self.rect.right > WIDTH:
+                self.speedx = -2
+            if self.rect.left < 0:
+                self.speedx = 2
 
     def shoot(self):
         bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
@@ -487,24 +459,18 @@ while running:
         all_sprites.add(new_power)
         powers.add(new_power)
     
-    if score >= 1500 and score < 3000 and len(enemies) == 0:  # 當分數達到1500且沒有敵人時
-        enemy1 = Enemy(80, 60)
-        enemy2 = Enemy(320, 60)
+    if score >= 1500 and score < 3000 and len(enemies) == 0:
+        enemy1 = Enemy(80, 60, moving=False)
+        enemy2 = Enemy(320, 60, moving=False)
         all_sprites.add(enemy1)
         all_sprites.add(enemy2)
         enemies.add(enemy1)
         enemies.add(enemy2)
-    
-    if score >= 3000 and len(enemies) == 0:  # 當分數達到3000且沒有敵人時
-        enemy1 = EnemyLv2(100, 60)
-        enemy2 = EnemyLv2(200, 60)
-        enemy3 = EnemyLv2(300, 60)
-        all_sprites.add(enemy1)
-        all_sprites.add(enemy2)
-        all_sprites.add(enemy3)
-        enemies.add(enemy1)
-        enemies.add(enemy2)
-        enemies.add(enemy3)
+
+    if score >= 3000 and len(enemies) < 1:
+        enemy = Enemy(0, 60, moving=True)
+        all_sprites.add(enemy)
+        enemies.add(enemy)
 
     # 取得輸入
     for event in pygame.event.get():
