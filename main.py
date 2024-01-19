@@ -355,7 +355,7 @@ class ScoreNumber(pygame.sprite.Sprite):
     def __init__(self, x, y, value):
         pygame.sprite.Sprite.__init__(self)
         self.value = value
-        self.image = font.render(str(value), True, YELLOW)  # 显示传入的数值
+        self.image = font.render(str(value), True, YELLOW)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -364,62 +364,34 @@ class ScoreNumber(pygame.sprite.Sprite):
     def update(self):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT:
-            self.kill()  # 数字移出屏幕后消失
+            self.kill()
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, moving=False):
         pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
-        scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
+        scaled_image = pygame.transform.scale(enemy_img, (60, 45))
+        scaled_image.set_colorkey(BLACK)
         self.image = scaled_image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.last_shot = pygame.time.get_ticks()
         self.health = 100
+        self.moving = moving
+        self.speedx = 2 if moving else 0
     
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.last_shot > 2000:  # 每2秒發射一次
             self.shoot()
-            self.last_shot = now   
-
-    def shoot(self):
-        bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
-        all_sprites.add(bullet)
-        e_bullets.add(bullet)
-
-    def draw_health(self, surf):
-        if self.health > 0:
-            BAR_LENGTH = 60
-            BAR_HEIGHT = 10
-            fill = (self.health / 100) * BAR_LENGTH
-            outline_rect = pygame.Rect(self.rect.x, self.rect.y - 15, BAR_LENGTH, BAR_HEIGHT)
-            fill_rect = pygame.Rect(self.rect.x, self.rect.y - 15, fill, BAR_HEIGHT)
-            pygame.draw.rect(surf, RED, fill_rect)
-            pygame.draw.rect(surf, WHITE, outline_rect, 2)
-    
-    def draw(self, surf):
-        surf.blit(self.image, self.rect)
-        self.draw_health(surf)
-
-class EnemyLv2(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))  # 調整尺寸
-        scaled_image.set_colorkey(BLACK)  # 在縮放後再次設置顏色鍵
-        self.image = scaled_image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.last_shot = pygame.time.get_ticks()
-        self.health = 100
-    
-    def update(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_shot > 1000:  # 每1秒發射一次
-            self.shoot()
-            self.last_shot = now   
+            self.last_shot = now
+        
+        if self.moving:
+            self.rect.x += self.speedx
+            if self.rect.right > WIDTH:
+                self.speedx = -2
+            if self.rect.left < 0:
+                self.speedx = 2
 
     def shoot(self):
         bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
@@ -475,10 +447,6 @@ while running:
         for i in range(8):
             new_rock()
         score = 0
-    
-    if player.lives == 0:
-        show_game_over(screen)
-        show_init = True
 
     clock.tick(FPS)
     
@@ -487,25 +455,34 @@ while running:
         all_sprites.add(new_power)
         powers.add(new_power)
     
-    if score >= 1500 and score < 3000 and len(enemies) == 0:  # 當分數達到1500且沒有敵人時
-        enemy1 = Enemy(80, 60)
-        enemy2 = Enemy(320, 60)
+    if score >= 1500 and score < 3000 and len(enemies) == 0:
+        enemy1 = Enemy(80, 60, moving=False)
+        enemy2 = Enemy(320, 60, moving=False)
         all_sprites.add(enemy1)
         all_sprites.add(enemy2)
         enemies.add(enemy1)
         enemies.add(enemy2)
-    
-    if score >= 3000 and len(enemies) == 0:  # 當分數達到3000且沒有敵人時
-        enemy1 = EnemyLv2(100, 60)
-        enemy2 = EnemyLv2(200, 60)
-        enemy3 = EnemyLv2(300, 60)
-        all_sprites.add(enemy1)
-        all_sprites.add(enemy2)
-        all_sprites.add(enemy3)
-        enemies.add(enemy1)
-        enemies.add(enemy2)
-        enemies.add(enemy3)
 
+    if score >= 3000 and len(enemies) < 2:
+        if len(enemies) == 0:  # 如果目前沒有敵人，則創建兩個敵人
+            enemy1 = Enemy(0, 60, moving=True)  # 從左邊開始向右移動
+            enemy2 = Enemy(WIDTH - 60, 60, moving=True)  # 從右邊開始向左移動
+            enemy2.speedx = -2  # 設置第二個敵人的移動方向為向左
+            all_sprites.add(enemy1)
+            all_sprites.add(enemy2)
+            enemies.add(enemy1)
+            enemies.add(enemy2)
+        elif len(enemies) == 1:  # 如果目前只有一個敵人
+            # 創建另一個敵人，具體是從左還是從右取決於現有敵人的位置
+            existing_enemy = enemies.sprites()[0]
+            if existing_enemy.rect.x < WIDTH / 2:  # 現有敵人在左邊
+                enemy = Enemy(WIDTH - 60, 60, moving=True)
+                enemy.speedx = -2
+            else:  # 現有敵人在右邊
+                enemy = Enemy(0, 60, moving=True)
+            all_sprites.add(enemy)
+            enemies.add(enemy)
+            
     # 取得輸入
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -547,7 +524,7 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            if not player.invulnerable:  # 新增的條件判斷
+            if not player.invulnerable:
                 player.gun = 1
 
     # 判斷寶物 飛船相撞
@@ -566,9 +543,6 @@ while running:
         elif hit.type == 'snowflower':
             player.hit_snowflower()
 
-    if player.lives == 0 and not(death_expl.alive()):
-        show_init = True
-
     # 判斷數字 飛船相撞
     hits = pygame.sprite.spritecollide(player, score_numbers, True)
     for hit in hits:
@@ -577,8 +551,8 @@ while running:
     # 判斷敵人子彈和玩家飛船的碰撞
     hits = pygame.sprite.spritecollide(player, e_bullets, True)
     for hit in hits:
-        if not player.invulnerable:  # 只有當飛船不是無敵模式時才受傷
-            player.health -= 20  # 或者任何適當的傷害值
+        if not player.invulnerable:
+            player.health -= 20
             if player.health <= 0:
                 death_expl = Explosion(player.rect.center, 'player')
                 all_sprites.add(death_expl)
@@ -596,6 +570,11 @@ while running:
             expl = Explosion(hit.rect.center, 'lg')
             all_sprites.add(expl)
             hit.kill()
+
+    if player.lives == 0:
+        if not death_expl.alive():
+            show_game_over(screen)
+            show_init = True
 
     # 畫面顯示
     screen.fill(BLACK)
