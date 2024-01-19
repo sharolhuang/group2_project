@@ -467,11 +467,26 @@ while running:
         enemies.add(enemy1)
         enemies.add(enemy2)
 
-    if score >= 3000 and len(enemies) < 1:
-        enemy = Enemy(0, 60, moving=True)
-        all_sprites.add(enemy)
-        enemies.add(enemy)
-
+    if score >= 3000 and len(enemies) < 2:
+        if len(enemies) == 0:  # 如果目前沒有敵人，則創建兩個敵人
+            enemy1 = Enemy(0, 60, moving=True)  # 從左邊開始向右移動
+            enemy2 = Enemy(WIDTH - 60, 60, moving=True)  # 從右邊開始向左移動
+            enemy2.speedx = -2  # 設置第二個敵人的移動方向為向左
+            all_sprites.add(enemy1)
+            all_sprites.add(enemy2)
+            enemies.add(enemy1)
+            enemies.add(enemy2)
+        elif len(enemies) == 1:  # 如果目前只有一個敵人
+            # 創建另一個敵人，具體是從左還是從右取決於現有敵人的位置
+            existing_enemy = enemies.sprites()[0]
+            if existing_enemy.rect.x < WIDTH / 2:  # 現有敵人在左邊
+                enemy = Enemy(WIDTH - 60, 60, moving=True)
+                enemy.speedx = -2
+            else:  # 現有敵人在右邊
+                enemy = Enemy(0, 60, moving=True)
+            all_sprites.add(enemy)
+            enemies.add(enemy)
+            
     # 取得輸入
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
