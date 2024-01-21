@@ -120,7 +120,6 @@ def draw_init():
                 return False
 
 def show_game_over(screen):
-    """显示游戏结束画面，并等待按键"""
     screen.blit(background_img, (0, 0))
     draw_text(screen, "GAME OVER", 64, WIDTH / 2, HEIGHT / 4)
     draw_text(screen, "Press any key to restart.", 22, WIDTH / 2, HEIGHT / 2)
@@ -170,7 +169,7 @@ class Player(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.snowflower_effect_time > 5000:
                 self.snowflower_effect_time = 0
                 for rock in rocks:
-                    rock.set_speed(1)  # 恢复正常速度
+                    rock.set_speed(1)  # 恢復正常速度
 
         if self.hidden and now - self.hide_time > 1000:
             self.hidden = False
@@ -189,19 +188,19 @@ class Player(pygame.sprite.Sprite):
             self.rect.left = 0
         
         current_time = pygame.time.get_ticks()
-        # 检查所有射击延迟事件
+        # 檢查所有射擊延遲事件
         for event in self.shoot_delay_events[:]:
             event_time, event_type = event
-            if current_time - event_time >= FPS * 0.1:  # 0.1秒后
+            if current_time - event_time >= FPS * 0.1:  # 延遲0.1秒後
                 if event_type == 'side_bullets':
-                    # 发射左右两侧的子弹
+                    # 發射左右兩側的子彈
                     bullet1 = Bullet(self.rect.left, self.rect.top)
                     bullet3 = Bullet(self.rect.right, self.rect.top)
                     all_sprites.add(bullet1)
                     all_sprites.add(bullet3)
                     bullets.add(bullet1)
                     bullets.add(bullet3)
-                self.shoot_delay_events.remove(event)  # 移除处理过的事件
+                self.shoot_delay_events.remove(event)  # 移除處理過的事件
 
     def shoot(self):
         if not(self.hidden):
@@ -219,11 +218,11 @@ class Player(pygame.sprite.Sprite):
                 bullets.add(bullet2)
                 shoot_sound.play()
             elif self.gun >=3:
-                # 发射中间的子弹
+                # (先)發射中間的子彈
                 bullet2 = Bullet(self.rect.centerx, self.rect.top)
                 all_sprites.add(bullet2)
                 bullets.add(bullet2)
-                # 添加新的射击延迟事件
+                # 添加延遲兩側子彈射擊的事件
                 current_time = pygame.time.get_ticks()
                 self.shoot_delay_events.append((current_time, 'side_bullets'))
                 shoot_sound.play()
@@ -257,7 +256,7 @@ class Player(pygame.sprite.Sprite):
     def hit_snowflower(self):
         self.snowflower_effect_time = pygame.time.get_ticks()
         for rock in rocks:
-            rock.set_speed(0.1)  # 降低速度
+            rock.set_speed(0.1)  # 隕石降速
 
 class Rock(pygame.sprite.Sprite):
     def __init__(self):
@@ -359,7 +358,7 @@ class ScoreNumber(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.speedy = 2  # 数字下降速度
+        self.speedy = 2
 
     def update(self):
         self.rect.y += self.speedy
@@ -382,7 +381,7 @@ class Enemy(pygame.sprite.Sprite):
     
     def update(self):
         now = pygame.time.get_ticks()
-        if now - self.last_shot > 2000:  # 每2秒發射一次
+        if now - self.last_shot > 2000:
             self.shoot()
             self.last_shot = now
         
@@ -450,8 +449,8 @@ while running:
 
     clock.tick(FPS)
     
-    if random.random() < 0.01:  # 每帧有 1% 的概率生成一个 Power 对象
-        new_power = Power((random.randint(0, WIDTH), -20))  # 在屏幕顶部随机位置生成
+    if random.random() < 0.01:  # 生成一個 Power 的機率為 1%
+        new_power = Power((random.randint(0, WIDTH), -20))
         all_sprites.add(new_power)
         powers.add(new_power)
     
@@ -473,7 +472,7 @@ while running:
             enemies.add(enemy1)
             enemies.add(enemy2)
         elif len(enemies) == 1:  # 如果目前只有一個敵人
-            # 創建另一個敵人，具體是從左還是從右取決於現有敵人的位置
+            # 創建另一個敵人，至於從左或從右取決於現有敵人的位置
             existing_enemy = enemies.sprites()[0]
             if existing_enemy.rect.x < WIDTH / 2:  # 現有敵人在左邊
                 enemy = Enemy(WIDTH - 60, 60, moving=True)
@@ -496,20 +495,20 @@ while running:
     score_numbers.update()
     enemies.update()
     e_bullets.update()
-    # 判斷石頭 子彈相撞
+    # 判斷石頭 v.s. 子彈的碰撞
     hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
     for hit in hits:
         random.choice(expl_sounds).play()
         expl = Explosion(hit.rect.center, 'lg')
         all_sprites.add(expl)
         if random.random() < 0.3:  # 30% 的概率
-            value = random.choice([100, 200, 300, 400, 500])  # 从列表中随机选择一个数值
+            value = random.choice([100, 200, 300, 400, 500])
             score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
             all_sprites.add(score_number)
             score_numbers.add(score_number)
         new_rock()
 
-    # 判斷石頭 飛船相撞
+    # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
         hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
         for hit in hits:
@@ -527,7 +526,7 @@ while running:
             if not player.invulnerable:
                 player.gun = 1
 
-    # 判斷寶物 飛船相撞
+    # 判斷寶物 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, powers, True)
     for hit in hits:
         if hit.type == 'heart':
@@ -543,12 +542,12 @@ while running:
         elif hit.type == 'snowflower':
             player.hit_snowflower()
 
-    # 判斷數字 飛船相撞
+    # 判斷分數 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, score_numbers, True)
     for hit in hits:
         score += hit.value
 
-    # 判斷敵人子彈和玩家飛船的碰撞
+    # 判斷敵人子彈 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, e_bullets, True)
     for hit in hits:
         if not player.invulnerable:
@@ -562,7 +561,7 @@ while running:
                 player.hide()
                 player.gun = 1
 
-    # 檢測子彈和敵人的碰撞
+    # 判斷子彈 v.s. 敵人的碰撞
     hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
     for hit in hits:
         hit.health -= 20
