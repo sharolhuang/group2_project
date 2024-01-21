@@ -1,4 +1,4 @@
-# 太空生存戰
+# Space Survival War
 import pygame
 import random
 import os
