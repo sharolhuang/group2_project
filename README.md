@@ -1,6 +1,5 @@
 # group2_project
-#### This is the Aoop final project of group 2, which teamed up by 110651024黃于瑄 and 110651001游宜宸.
-### The project is a game called "Space War 太空生存戰"
+#### This is the Aoop final project of group 2 teamed up by 110651024黃于瑄 and 110651001游宜宸.The project is a game called "Space War 太空生存戰"
 ### Gameplay Mechanics:
 #### • Controlling the Spaceship: Use the left and right arrow
 keys for lateral movement.
