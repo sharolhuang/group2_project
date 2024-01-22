@@ -141,16 +141,27 @@ def show_game_over(screen):
             if event.type == pygame.KEYDOWN:
                 waiting = False
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self):
+class GameObject(pygame.sprite.Sprite):
+    def __init__(self, image_path, center, image_scale=None, color_key=None):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(player_img, (50, 38))
-        self.image.set_colorkey(BLACK)
+        self.image = pygame.image.load(image_path).convert_alpha()
+        if image_scale:
+            self.image = pygame.transform.scale(self.image, image_scale)
+        if color_key is not None:
+            self.image.set_colorkey(color_key)
         self.rect = self.image.get_rect()
+        self.rect.center = center
+
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)
+
+class Player(GameObject):
+    def __init__(self):
+        image_path = os.path.join("img", "player.png")
+        center = (WIDTH / 2, HEIGHT - 25)
+        super().__init__(image_path, center, image_scale=(50, 38), color_key=BLACK)
+        
         self.radius = 20
-        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-        self.rect.centerx = WIDTH / 2
-        self.rect.bottom = HEIGHT - 10
         self.speedx = 8
         self.health = 100
         self.lives = 3
@@ -266,22 +277,19 @@ class Player(pygame.sprite.Sprite):
         for rock in rocks:
             rock.set_speed(0.1)  # 隕石降速
 
-class Rock(pygame.sprite.Sprite):
+class Rock(GameObject):
     def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.image_ori = random.choice(rock_imgs) 
-        self.image_ori.set_colorkey(BLACK)
-        self.image = self.image_ori.copy()
-        self.rect = self.image.get_rect()
+        image_path = random.choice([os.path.join("img", f"rock{i}.png") for i in range(7)])
+        center = (random.randrange(0, WIDTH), random.randrange(-180, -100))
+        super().__init__(image_path, center, color_key=BLACK)
+
         self.radius = int(self.rect.width * 0.85 / 2)
-        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-        self.rect.x = random.randrange(0, WIDTH - self.rect.width)
-        self.rect.y = random.randrange(-180, -100)
         self.original_speedy = random.randrange(2, 5)  # 原始速度
         self.speedy = self.original_speedy
         self.speedx = random.randrange(-3, 3)
         self.total_degree = 0
         self.rot_degree = random.randrange(-3, 3)
+        self.image_ori = self.image.copy()
 
     def set_speed(self, speed_factor):
         self.speedy = self.original_speedy * speed_factor
@@ -304,13 +312,11 @@ class Rock(pygame.sprite.Sprite):
             self.speedy = random.randrange(2, 10)
             self.speedx = random.randrange(-3, 3)
 
-class Bullet(pygame.sprite.Sprite):
+class Bullet(GameObject):
     def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = bullet_img
-        self.image.set_colorkey(BLACK)
-        self.rect = self.image.get_rect()
-        self.rect.centerx = x
+        image_path = os.path.join("img", "bullet.png")
+        center = (x, y)
+        super().__init__(image_path, center, color_key=BLACK)
         self.rect.bottom = y
         self.speedy = -10
 
@@ -373,15 +379,10 @@ class ScoreNumber(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-class Enemy(pygame.sprite.Sprite):
+class Enemy(GameObject):
     def __init__(self, x, y, moving=False):
-        pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))
-        scaled_image.set_colorkey(BLACK)
-        self.image = scaled_image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        image_path = os.path.join("img", "enemy.png")
+        super().__init__(image_path, (x, y), image_scale=(60, 45), color_key=BLACK)
         self.last_shot = pygame.time.get_ticks()
         self.health = 100
         self.moving = moving
@@ -419,13 +420,10 @@ class Enemy(pygame.sprite.Sprite):
         surf.blit(self.image, self.rect)
         self.draw_health(surf)
 
-class EnemyBullet(pygame.sprite.Sprite):
+class EnemyBullet(GameObject):
     def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(e_bullet_img, (20, 40))
-        self.image.set_colorkey(BLACK)
-        self.rect = self.image.get_rect()
-        self.rect.centerx = x
+        image_path = os.path.join("img", "e_bullet.png")
+        super().__init__(image_path, (x, y), image_scale=(20, 40), color_key=BLACK)
         self.rect.top = y
         self.speedy = 5
 
