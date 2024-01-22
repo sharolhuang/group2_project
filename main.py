@@ -523,8 +523,8 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            if not player.invulnerable:
-                player.gun = 1
+            player.gun = 1
+
 
     # 判斷寶物 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, powers, True)
@@ -559,7 +559,8 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-                player.gun = 1
+            player.gun = 1
+
 
     # 判斷子彈 v.s. 敵人的碰撞
     hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
