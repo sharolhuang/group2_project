@@ -149,6 +149,25 @@ def spawn_power(powers, all_sprites):
         powers.add(new_power)
         all_sprites.add(new_power)
 
+def handle_collision_group(sprite, group, dokill, action):
+    hits = pygame.sprite.spritecollide(sprite, group, dokill)
+    for hit in hits:
+        action(sprite, hit)
+
+def handle_rock_player_collision(player, rock):
+    new_rock()
+    player.health -= rock.radius * 2
+    explosion = Explosion(rock.rect.center, 'sm')
+    all_sprites.add(explosion)
+    if player.health <= 0:
+        death_expl = Explosion(player.rect.center, 'player')
+        all_sprites.add(death_expl)
+        die_sound.play()
+        player.lives -= 1
+        player.health = 100
+        player.hide()
+    player.gun = 1
+
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_path, center, image_scale=None, color_key=None):
         pygame.sprite.Sprite.__init__(self)
@@ -491,21 +510,7 @@ while running:
 
     # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
-        hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
-        for hit in hits:
-            new_rock()
-            player.health -= hit.radius * 2
-            expl = Explosion(hit.rect.center, 'sm')
-            all_sprites.add(expl)
-            if player.health <= 0:
-                death_expl = Explosion(player.rect.center, 'player')
-                all_sprites.add(death_expl)
-                die_sound.play()
-                player.lives -= 1
-                player.health = 100
-                player.hide()
-            player.gun = 1
-
+        handle_collision_group(player, rocks, True, handle_rock_player_collision)
 
     # 判斷寶物 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, powers, True)
