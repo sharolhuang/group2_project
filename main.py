@@ -170,17 +170,27 @@ def handle_rock_player_collision(player, rock):
 
 def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
     hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
-    for hit in hits:
-        for bullet in hits[hit]:
-            collision_handler(hit, bullet)
+    for sprite1 in hits:
+        for sprite2 in hits[sprite1]:
+            collision_handler(sprite1, sprite2)
 
-
-def handle_bullet_enemy_collision(bullet, enemy):
+def handle_bullet_enemy_collision(enemy, bullet):
     enemy.health -= 20
     if enemy.health <= 0:
-        explosion = Explosion(enemy.rect.center, 'lg')
-        all_sprites.add(explosion)
+        expl = Explosion(enemy.rect.center, 'lg')
+        all_sprites.add(expl)
         enemy.kill()
+
+def handle_rock_bullet_collision(rock, bullet):
+    random.choice(expl_sounds).play()
+    expl = Explosion(rock.rect.center, 'lg')
+    all_sprites.add(expl)
+    if random.random() < 0.3:  # 30% 的概率
+        value = random.choice([100, 200, 300, 400, 500])
+        score_number = ScoreNumber(rock.rect.centerx, rock.rect.centery, value)
+        all_sprites.add(score_number)
+        score_numbers.add(score_number)
+    new_rock()
 
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_path, center, image_scale=None, color_key=None):
@@ -510,17 +520,7 @@ while running:
     enemies.update()
     e_bullets.update()
     # 判斷石頭 v.s. 子彈的碰撞
-    hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
-    for hit in hits:
-        random.choice(expl_sounds).play()
-        expl = Explosion(hit.rect.center, 'lg')
-        all_sprites.add(expl)
-        if random.random() < 0.3:  # 30% 的概率
-            value = random.choice([100, 200, 300, 400, 500])
-            score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
-            all_sprites.add(score_number)
-            score_numbers.add(score_number)
-        new_rock()
+    handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
 
     # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
