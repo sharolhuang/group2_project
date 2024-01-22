@@ -1,4 +1,4 @@
-# 太空生存戰
+# Space Survival War
 import pygame
 import random
 import os
@@ -24,45 +24,53 @@ enemies = pygame.sprite.Group()
 e_bullets = pygame.sprite.Group()
 
 # 載入圖片
-background_img = pygame.image.load(os.path.join("img", "background.png")).convert()
-player_img = pygame.image.load(os.path.join("img", "player.png")).convert()
+def load_image(file_name):
+    return pygame.image.load(os.path.join("img", file_name)).convert()
+
+player_img = load_image("player.png")
+background_img = load_image("background.png")
+bullet_img = load_image("bullet.png")
+e_bullet_img = load_image("e_bullet.png")
 player_mini_img = pygame.transform.scale(player_img, (25, 19))
 player_mini_img.set_colorkey(BLACK)
 pygame.display.set_icon(player_mini_img)
-bullet_img = pygame.image.load(os.path.join("img", "bullet.png")).convert()
 enemy_img = pygame.image.load(os.path.join("img", "enemy.png")).convert_alpha()
-e_bullet_img = pygame.image.load(os.path.join("img", "e_bullet.png")).convert()
+
 rock_imgs = []
 for i in range(7):
-    rock_imgs.append(pygame.image.load(os.path.join("img", f"rock{i}.png")).convert())
+    rock_imgs.append(load_image(f"rock{i}.png"))
 expl_anim = {}
 expl_anim['lg'] = []
 expl_anim['sm'] = []
 expl_anim['player'] = []
 for i in range(9):
-    expl_img = pygame.image.load(os.path.join("img", f"expl{i}.png")).convert()
+    expl_img = load_image(f"expl{i}.png")
     expl_img.set_colorkey(BLACK)
     expl_anim['lg'].append(pygame.transform.scale(expl_img, (75, 75)))
     expl_anim['sm'].append(pygame.transform.scale(expl_img, (30, 30)))
-    player_expl_img = pygame.image.load(os.path.join("img", f"player_expl{i}.png")).convert()
+    player_expl_img = load_image(f"player_expl{i}.png")
     player_expl_img.set_colorkey(BLACK)
     expl_anim['player'].append(player_expl_img)
 power_imgs = {}
-power_imgs['heart'] = pygame.image.load(os.path.join("img", "heart.png")).convert()
+power_imgs['heart'] = load_image("heart.png")
 power_imgs['heart'] = pygame.transform.scale(power_imgs['heart'], (50, 50))
-power_imgs['gun'] = pygame.image.load(os.path.join("img", "gun.png")).convert()
-power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
-power_imgs['snowflower'] = pygame.image.load(os.path.join("img", "snowflower.png")).convert()
+power_imgs['gun'] = load_image("gun.png")
+power_imgs['shield'] = load_image("shield.png")
+power_imgs['snowflower'] = load_image("snowflower.png")
 power_imgs['snowflower'] = pygame.transform.scale(power_imgs['snowflower'], (50, 50))
 
 # 載入音樂、音效
-shoot_sound = pygame.mixer.Sound(os.path.join("sound", "shoot.wav"))
-gun_sound = pygame.mixer.Sound(os.path.join("sound", "pow1.wav"))
-shield_sound = pygame.mixer.Sound(os.path.join("sound", "pow0.wav"))
-die_sound = pygame.mixer.Sound(os.path.join("sound", "rumble.ogg"))
+def load_sound(file_name):
+    return pygame.mixer.Sound(os.path.join("sound", file_name))
+
+shoot_sound = load_sound("shoot.wav")
+
+gun_sound = load_sound("pow1.wav")
+shield_sound = load_sound("pow0.wav")
+die_sound = load_sound("rumble.ogg")
 expl_sounds = [
-    pygame.mixer.Sound(os.path.join("sound", "expl0.wav")),
-    pygame.mixer.Sound(os.path.join("sound", "expl1.wav"))
+    load_sound("expl0.wav"),
+    load_sound("expl1.wav")
 ]
 pygame.mixer.music.load(os.path.join("sound", "background.ogg"))
 pygame.mixer.music.set_volume(0.4)
@@ -120,7 +128,6 @@ def draw_init():
                 return False
 
 def show_game_over(screen):
-    """显示游戏结束画面，并等待按键"""
     screen.blit(background_img, (0, 0))
     draw_text(screen, "GAME OVER", 64, WIDTH / 2, HEIGHT / 4)
     draw_text(screen, "Press any key to restart.", 22, WIDTH / 2, HEIGHT / 2)
@@ -134,16 +141,63 @@ def show_game_over(screen):
             if event.type == pygame.KEYDOWN:
                 waiting = False
 
-class Player(pygame.sprite.Sprite):
-    def __init__(self):
+def spawn_enemies(score, enemies, all_sprites):
+    if score >= 1500 and score < 3000 and len(enemies) == 0:
+        enemies.add(Enemy(80, 60, moving=False), Enemy(320, 60, moving=False))
+    elif score >= 3000 and len(enemies) < 2:
+        if len(enemies) == 0:
+            enemies.add(Enemy(0, 60, moving=True), Enemy(WIDTH - 60, 60, moving=True))
+        elif len(enemies) == 1:
+            x_pos = WIDTH - 60 if enemies.sprites()[0].rect.x < WIDTH / 2 else 0
+            enemies.add(Enemy(x_pos, 60, moving=True))
+    for enemy in enemies:
+        if enemy not in all_sprites:
+            all_sprites.add(enemy)
+
+def spawn_power(powers, all_sprites):
+    if random.random() < 0.01:  # 1% 機率生成 Power
+        new_power = Power((random.randint(0, WIDTH), -20))
+        powers.add(new_power)
+        all_sprites.add(new_power)
+
+class GameObject(pygame.sprite.Sprite):
+    def __init__(self, image_path, center, image_scale=None, color_key=None):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(player_img, (50, 38))
-        self.image.set_colorkey(BLACK)
+        self.image = pygame.image.load(image_path).convert_alpha()
+        if image_scale:
+            self.image = pygame.transform.scale(self.image, image_scale)
+        if color_key is not None:
+            self.image.set_colorkey(color_key)
         self.rect = self.image.get_rect()
+        self.rect.center = center
+
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)
+
+    def move(self, speedx, speedy):
+        """通用移動方法，如果適用的話"""
+        self.rect.x += speedx
+        self.rect.y += speedy
+
+    def off_screen_kill(self):
+        """如果物件移出屏幕，則自動消除"""
+        if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
+            self.kill()
+
+    def draw_health(self, surf, hp, max_hp, bar_length, bar_height, x_offset=0, y_offset=0):
+        """繪製生命條"""
+        fill = (hp / max_hp) * bar_length
+        outline_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, bar_length, bar_height)
+        fill_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, fill, bar_height)
+        pygame.draw.rect(surf, GREEN, fill_rect)
+        pygame.draw.rect(surf, WHITE, outline_rect, 2)
+
+class Player(GameObject):
+    def __init__(self):
+        image_path = os.path.join("img", "player.png")
+        center = (WIDTH / 2, HEIGHT - 25)
+        super().__init__(image_path, center, image_scale=(50, 38), color_key=BLACK)
         self.radius = 20
-        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-        self.rect.centerx = WIDTH / 2
-        self.rect.bottom = HEIGHT - 10
         self.speedx = 8
         self.health = 100
         self.lives = 3
@@ -170,7 +224,7 @@ class Player(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.snowflower_effect_time > 5000:
                 self.snowflower_effect_time = 0
                 for rock in rocks:
-                    rock.set_speed(1)  # 恢复正常速度
+                    rock.set_speed(1)  # 恢復正常速度
 
         if self.hidden and now - self.hide_time > 1000:
             self.hidden = False
@@ -189,19 +243,19 @@ class Player(pygame.sprite.Sprite):
             self.rect.left = 0
         
         current_time = pygame.time.get_ticks()
-        # 检查所有射击延迟事件
+        # 檢查所有射擊延遲事件
         for event in self.shoot_delay_events[:]:
             event_time, event_type = event
-            if current_time - event_time >= FPS * 0.1:  # 0.1秒后
+            if current_time - event_time >= FPS * 0.1:  # 延遲0.1秒後
                 if event_type == 'side_bullets':
-                    # 发射左右两侧的子弹
+                    # 發射左右兩側的子彈
                     bullet1 = Bullet(self.rect.left, self.rect.top)
                     bullet3 = Bullet(self.rect.right, self.rect.top)
                     all_sprites.add(bullet1)
                     all_sprites.add(bullet3)
                     bullets.add(bullet1)
                     bullets.add(bullet3)
-                self.shoot_delay_events.remove(event)  # 移除处理过的事件
+                self.shoot_delay_events.remove(event)  # 移除處理過的事件
 
     def shoot(self):
         if not(self.hidden):
@@ -219,11 +273,11 @@ class Player(pygame.sprite.Sprite):
                 bullets.add(bullet2)
                 shoot_sound.play()
             elif self.gun >=3:
-                # 发射中间的子弹
+                # (先)發射中間的子彈
                 bullet2 = Bullet(self.rect.centerx, self.rect.top)
                 all_sprites.add(bullet2)
                 bullets.add(bullet2)
-                # 添加新的射击延迟事件
+                # 添加延遲兩側子彈射擊的事件
                 current_time = pygame.time.get_ticks()
                 self.shoot_delay_events.append((current_time, 'side_bullets'))
                 shoot_sound.play()
@@ -257,24 +311,20 @@ class Player(pygame.sprite.Sprite):
     def hit_snowflower(self):
         self.snowflower_effect_time = pygame.time.get_ticks()
         for rock in rocks:
-            rock.set_speed(0.1)  # 降低速度
+            rock.set_speed(0.1)  # 隕石降速
 
-class Rock(pygame.sprite.Sprite):
+class Rock(GameObject):
     def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.image_ori = random.choice(rock_imgs) 
-        self.image_ori.set_colorkey(BLACK)
-        self.image = self.image_ori.copy()
-        self.rect = self.image.get_rect()
+        image_path = random.choice([os.path.join("img", f"rock{i}.png") for i in range(7)])
+        center = (random.randrange(0, WIDTH), random.randrange(-180, -100))
+        super().__init__(image_path, center, color_key=BLACK)
         self.radius = int(self.rect.width * 0.85 / 2)
-        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
-        self.rect.x = random.randrange(0, WIDTH - self.rect.width)
-        self.rect.y = random.randrange(-180, -100)
         self.original_speedy = random.randrange(2, 5)  # 原始速度
         self.speedy = self.original_speedy
         self.speedx = random.randrange(-3, 3)
         self.total_degree = 0
         self.rot_degree = random.randrange(-3, 3)
+        self.image_ori = self.image.copy()
 
     def set_speed(self, speed_factor):
         self.speedy = self.original_speedy * speed_factor
@@ -297,20 +347,16 @@ class Rock(pygame.sprite.Sprite):
             self.speedy = random.randrange(2, 10)
             self.speedx = random.randrange(-3, 3)
 
-class Bullet(pygame.sprite.Sprite):
+class Bullet(GameObject):
     def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = bullet_img
-        self.image.set_colorkey(BLACK)
-        self.rect = self.image.get_rect()
-        self.rect.centerx = x
+        image_path = os.path.join("img", "bullet.png")
+        super().__init__(image_path, (x, y), color_key=BLACK)
         self.rect.bottom = y
         self.speedy = -10
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.bottom < 0:
-            self.kill()
+        self.off_screen_kill()
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center, size):
@@ -359,22 +405,17 @@ class ScoreNumber(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.speedy = 2  # 数字下降速度
+        self.speedy = 2
 
     def update(self):
         self.rect.y += self.speedy
         if self.rect.top > HEIGHT:
             self.kill()
 
-class Enemy(pygame.sprite.Sprite):
+class Enemy(GameObject):
     def __init__(self, x, y, moving=False):
-        pygame.sprite.Sprite.__init__(self)
-        scaled_image = pygame.transform.scale(enemy_img, (60, 45))
-        scaled_image.set_colorkey(BLACK)
-        self.image = scaled_image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        image_path = os.path.join("img", "enemy.png")
+        super().__init__(image_path, (x, y), image_scale=(60, 45), color_key=BLACK)
         self.last_shot = pygame.time.get_ticks()
         self.health = 100
         self.moving = moving
@@ -382,7 +423,7 @@ class Enemy(pygame.sprite.Sprite):
     
     def update(self):
         now = pygame.time.get_ticks()
-        if now - self.last_shot > 2000:  # 每2秒發射一次
+        if now - self.last_shot > 2000:
             self.shoot()
             self.last_shot = now
         
@@ -412,20 +453,16 @@ class Enemy(pygame.sprite.Sprite):
         surf.blit(self.image, self.rect)
         self.draw_health(surf)
 
-class EnemyBullet(pygame.sprite.Sprite):
+class EnemyBullet(GameObject):
     def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(e_bullet_img, (20, 40))
-        self.image.set_colorkey(BLACK)
-        self.rect = self.image.get_rect()
-        self.rect.centerx = x
+        image_path = os.path.join("img", "e_bullet.png")
+        super().__init__(image_path, (x, y), image_scale=(20, 40), color_key=BLACK)
         self.rect.top = y
         self.speedy = 5
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        self.off_screen_kill()
 
 pygame.mixer.music.play(-1)
 
@@ -442,6 +479,7 @@ while running:
         rocks = pygame.sprite.Group()
         bullets = pygame.sprite.Group()
         powers = pygame.sprite.Group()
+        enemies = pygame.sprite.Group()
         player = Player()
         all_sprites.add(player)
         for i in range(8):
@@ -449,39 +487,9 @@ while running:
         score = 0
 
     clock.tick(FPS)
-    
-    if random.random() < 0.01:  # 每帧有 1% 的概率生成一个 Power 对象
-        new_power = Power((random.randint(0, WIDTH), -20))  # 在屏幕顶部随机位置生成
-        all_sprites.add(new_power)
-        powers.add(new_power)
-    
-    if score >= 1500 and score < 3000 and len(enemies) == 0:
-        enemy1 = Enemy(80, 60, moving=False)
-        enemy2 = Enemy(320, 60, moving=False)
-        all_sprites.add(enemy1)
-        all_sprites.add(enemy2)
-        enemies.add(enemy1)
-        enemies.add(enemy2)
 
-    if score >= 3000 and len(enemies) < 2:
-        if len(enemies) == 0:  # 如果目前沒有敵人，則創建兩個敵人
-            enemy1 = Enemy(0, 60, moving=True)  # 從左邊開始向右移動
-            enemy2 = Enemy(WIDTH - 60, 60, moving=True)  # 從右邊開始向左移動
-            enemy2.speedx = -2  # 設置第二個敵人的移動方向為向左
-            all_sprites.add(enemy1)
-            all_sprites.add(enemy2)
-            enemies.add(enemy1)
-            enemies.add(enemy2)
-        elif len(enemies) == 1:  # 如果目前只有一個敵人
-            # 創建另一個敵人，具體是從左還是從右取決於現有敵人的位置
-            existing_enemy = enemies.sprites()[0]
-            if existing_enemy.rect.x < WIDTH / 2:  # 現有敵人在左邊
-                enemy = Enemy(WIDTH - 60, 60, moving=True)
-                enemy.speedx = -2
-            else:  # 現有敵人在右邊
-                enemy = Enemy(0, 60, moving=True)
-            all_sprites.add(enemy)
-            enemies.add(enemy)
+    spawn_power(powers, all_sprites)
+    spawn_enemies(score, enemies, all_sprites)
             
     # 取得輸入
     for event in pygame.event.get():
@@ -496,20 +504,20 @@ while running:
     score_numbers.update()
     enemies.update()
     e_bullets.update()
-    # 判斷石頭 子彈相撞
+    # 判斷石頭 v.s. 子彈的碰撞
     hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
     for hit in hits:
         random.choice(expl_sounds).play()
         expl = Explosion(hit.rect.center, 'lg')
         all_sprites.add(expl)
         if random.random() < 0.3:  # 30% 的概率
-            value = random.choice([100, 200, 300, 400, 500])  # 从列表中随机选择一个数值
+            value = random.choice([100, 200, 300, 400, 500])
             score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
             all_sprites.add(score_number)
             score_numbers.add(score_number)
         new_rock()
 
-    # 判斷石頭 飛船相撞
+    # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
         hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
         for hit in hits:
@@ -524,10 +532,10 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-            if not player.invulnerable:
-                player.gun = 1
+            player.gun = 1
 
-    # 判斷寶物 飛船相撞
+
+    # 判斷寶物 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, powers, True)
     for hit in hits:
         if hit.type == 'heart':
@@ -543,12 +551,12 @@ while running:
         elif hit.type == 'snowflower':
             player.hit_snowflower()
 
-    # 判斷數字 飛船相撞
+    # 判斷分數 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, score_numbers, True)
     for hit in hits:
         score += hit.value
 
-    # 判斷敵人子彈和玩家飛船的碰撞
+    # 判斷敵人子彈 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, e_bullets, True)
     for hit in hits:
         if not player.invulnerable:
@@ -560,9 +568,10 @@ while running:
                 player.lives -= 1
                 player.health = 100
                 player.hide()
-                player.gun = 1
+            player.gun = 1
 
-    # 檢測子彈和敵人的碰撞
+
+    # 判斷子彈 v.s. 敵人的碰撞
     hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
     for hit in hits:
         hit.health -= 20
