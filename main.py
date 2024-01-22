@@ -24,14 +24,18 @@ enemies = pygame.sprite.Group()
 e_bullets = pygame.sprite.Group()
 
 # 載入圖片
-background_img = pygame.image.load(os.path.join("img", "background.png")).convert()
-player_img = pygame.image.load(os.path.join("img", "player.png")).convert()
+def load_image(file_name):
+    return pygame.image.load(os.path.join("img", file_name)).convert()
+
+player_img = load_image("player.png")
+background_img = load_image("background.png")
+bullet_img = load_image("bullet.png")
+e_bullet_img = load_image("e_bullet.png")
 player_mini_img = pygame.transform.scale(player_img, (25, 19))
 player_mini_img.set_colorkey(BLACK)
 pygame.display.set_icon(player_mini_img)
-bullet_img = pygame.image.load(os.path.join("img", "bullet.png")).convert()
 enemy_img = pygame.image.load(os.path.join("img", "enemy.png")).convert_alpha()
-e_bullet_img = pygame.image.load(os.path.join("img", "e_bullet.png")).convert()
+
 rock_imgs = []
 for i in range(7):
     rock_imgs.append(pygame.image.load(os.path.join("img", f"rock{i}.png")).convert())
@@ -48,11 +52,11 @@ for i in range(9):
     player_expl_img.set_colorkey(BLACK)
     expl_anim['player'].append(player_expl_img)
 power_imgs = {}
-power_imgs['heart'] = pygame.image.load(os.path.join("img", "heart.png")).convert()
+power_imgs['heart'] = load_image("heart.png")
 power_imgs['heart'] = pygame.transform.scale(power_imgs['heart'], (50, 50))
-power_imgs['gun'] = pygame.image.load(os.path.join("img", "gun.png")).convert()
-power_imgs['shield'] = pygame.image.load(os.path.join("img", "shield.png")).convert()
-power_imgs['snowflower'] = pygame.image.load(os.path.join("img", "snowflower.png")).convert()
+power_imgs['gun'] = load_image("gun.png")
+power_imgs['shield'] = load_image("shield.png")
+power_imgs['snowflower'] = load_image("snowflower.png")
 power_imgs['snowflower'] = pygame.transform.scale(power_imgs['snowflower'], (50, 50))
 
 # 載入音樂、音效
