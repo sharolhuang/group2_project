@@ -90,17 +90,6 @@ def new_rock():
     all_sprites.add(r)
     rocks.add(r)
 
-def draw_health(surf, hp, x, y):
-    if hp < 0:
-        hp = 0
-    BAR_LENGTH = 100
-    BAR_HEIGHT = 10
-    fill = (hp/100)*BAR_LENGTH
-    outline_rect = pygame.Rect(x, y, BAR_LENGTH, BAR_HEIGHT)
-    fill_rect = pygame.Rect(x, y, fill, BAR_HEIGHT)
-    pygame.draw.rect(surf, GREEN, fill_rect)
-    pygame.draw.rect(surf, WHITE, outline_rect, 2)
-
 def draw_lives(surf, lives, img, x, y):
     for i in range(lives):
         img_rect = img.get_rect()
@@ -160,6 +149,76 @@ def spawn_power(powers, all_sprites):
         powers.add(new_power)
         all_sprites.add(new_power)
 
+def handle_player_death():
+    global death_expl, player
+    if death_expl is None or not death_expl.alive():
+        death_expl = Explosion(player.rect.center, 'player')
+        all_sprites.add(death_expl)
+    die_sound.play()
+    player.lives -= 1
+    player.health = 100
+    player.hide()
+    player.gun = 1
+
+def handle_collision_single_with_group(single, group, dokill, collision_handler):
+    hits = pygame.sprite.spritecollide(single, group, dokill)
+    for hit in hits:
+        collision_handler(single, hit)
+
+def handle_rock_player_collision(player, rock):
+    new_rock()
+    player.health -= rock.radius * 2
+    explosion = Explosion(rock.rect.center, 'sm')
+    all_sprites.add(explosion)
+    if player.health <= 0:
+        handle_player_death()
+
+def handle_player_power_collision(player, power):
+    if power.type == 'heart':
+        player.health += 20
+        if player.health > 100:
+            player.health = 100
+    elif power.type == 'gun':
+        player.upgrade_gun()
+    elif power.type == 'shield':
+        player.set_invulnerable()
+    elif power.type == 'snowflower':
+        player.hit_snowflower()
+
+def handle_player_enemy_bullet_collision(player, bullet):
+    if not player.invulnerable:
+        player.health -= 20
+        if player.health <= 0:
+            handle_player_death()
+
+def handle_player_score_number_collision(player, score_number):
+    global score
+    score += score_number.value
+
+def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
+    hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
+    for sprite1 in hits:
+        for sprite2 in hits[sprite1]:
+            collision_handler(sprite1, sprite2)
+
+def handle_bullet_enemy_collision(enemy, bullet):
+    enemy.health -= 20
+    if enemy.health <= 0:
+        expl = Explosion(enemy.rect.center, 'lg')
+        all_sprites.add(expl)
+        enemy.kill()
+
+def handle_rock_bullet_collision(rock, bullet):
+    random.choice(expl_sounds).play()
+    expl = Explosion(rock.rect.center, 'lg')
+    all_sprites.add(expl)
+    if random.random() < 0.3:  # 30% 的概率
+        value = random.choice([100, 200, 300, 400, 500])
+        score_number = ScoreNumber(rock.rect.centerx, rock.rect.centery, value)
+        all_sprites.add(score_number)
+        score_numbers.add(score_number)
+    new_rock()
+
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_path, center, image_scale=None, color_key=None):
         pygame.sprite.Sprite.__init__(self)
@@ -175,21 +234,18 @@ class GameObject(pygame.sprite.Sprite):
         surf.blit(self.image, self.rect)
 
     def move(self, speedx, speedy):
-        """通用移動方法，如果適用的話"""
         self.rect.x += speedx
         self.rect.y += speedy
 
     def off_screen_kill(self):
-        """如果物件移出屏幕，則自動消除"""
         if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
             self.kill()
 
-    def draw_health(self, surf, hp, max_hp, bar_length, bar_height, x_offset=0, y_offset=0):
-        """繪製生命條"""
+    def draw_health(self, surf, hp, max_hp, x, y, bar_length, bar_height, bar_color):
         fill = (hp / max_hp) * bar_length
-        outline_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, bar_length, bar_height)
-        fill_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, fill, bar_height)
-        pygame.draw.rect(surf, GREEN, fill_rect)
+        outline_rect = pygame.Rect(x, y, bar_length, bar_height)
+        fill_rect = pygame.Rect(x, y, fill, bar_height)
+        pygame.draw.rect(surf, bar_color, fill_rect)
         pygame.draw.rect(surf, WHITE, outline_rect, 2)
 
 class Player(GameObject):
@@ -439,20 +495,6 @@ class Enemy(GameObject):
         all_sprites.add(bullet)
         e_bullets.add(bullet)
 
-    def draw_health(self, surf):
-        if self.health > 0:
-            BAR_LENGTH = 60
-            BAR_HEIGHT = 10
-            fill = (self.health / 100) * BAR_LENGTH
-            outline_rect = pygame.Rect(self.rect.x, self.rect.y - 15, BAR_LENGTH, BAR_HEIGHT)
-            fill_rect = pygame.Rect(self.rect.x, self.rect.y - 15, fill, BAR_HEIGHT)
-            pygame.draw.rect(surf, RED, fill_rect)
-            pygame.draw.rect(surf, WHITE, outline_rect, 2)
-    
-    def draw(self, surf):
-        surf.blit(self.image, self.rect)
-        self.draw_health(surf)
-
 class EnemyBullet(GameObject):
     def __init__(self, x, y):
         image_path = os.path.join("img", "e_bullet.png")
@@ -504,86 +546,17 @@ while running:
     score_numbers.update()
     enemies.update()
     e_bullets.update()
-    # 判斷石頭 v.s. 子彈的碰撞
-    hits = pygame.sprite.groupcollide(rocks, bullets, True, True)
-    for hit in hits:
-        random.choice(expl_sounds).play()
-        expl = Explosion(hit.rect.center, 'lg')
-        all_sprites.add(expl)
-        if random.random() < 0.3:  # 30% 的概率
-            value = random.choice([100, 200, 300, 400, 500])
-            score_number = ScoreNumber(hit.rect.centerx, hit.rect.centery, value)
-            all_sprites.add(score_number)
-            score_numbers.add(score_number)
-        new_rock()
-
-    # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
-        hits = pygame.sprite.spritecollide(player, rocks, True, pygame.sprite.collide_circle)
-        for hit in hits:
-            new_rock()
-            player.health -= hit.radius * 2
-            expl = Explosion(hit.rect.center, 'sm')
-            all_sprites.add(expl)
-            if player.health <= 0:
-                death_expl = Explosion(player.rect.center, 'player')
-                all_sprites.add(death_expl)
-                die_sound.play()
-                player.lives -= 1
-                player.health = 100
-                player.hide()
-            player.gun = 1
+        handle_collision_single_with_group(player, rocks, True, handle_rock_player_collision)
+    handle_collision_single_with_group(player, powers, True, handle_player_power_collision)
+    handle_collision_single_with_group(player, score_numbers, True, handle_player_score_number_collision)
+    handle_collision_single_with_group(player, e_bullets, True, handle_player_enemy_bullet_collision)
+    handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
+    handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
 
-
-    # 判斷寶物 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, powers, True)
-    for hit in hits:
-        if hit.type == 'heart':
-            player.health += 20
-            if player.health > 100:
-                player.health = 100
-            shield_sound.play()
-        elif hit.type == 'gun':
-            player.upgrade_gun()
-            gun_sound.play()
-        elif hit.type == 'shield':
-            player.set_invulnerable()
-        elif hit.type == 'snowflower':
-            player.hit_snowflower()
-
-    # 判斷分數 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, score_numbers, True)
-    for hit in hits:
-        score += hit.value
-
-    # 判斷敵人子彈 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, e_bullets, True)
-    for hit in hits:
-        if not player.invulnerable:
-            player.health -= 20
-            if player.health <= 0:
-                death_expl = Explosion(player.rect.center, 'player')
-                all_sprites.add(death_expl)
-                die_sound.play()
-                player.lives -= 1
-                player.health = 100
-                player.hide()
-            player.gun = 1
-
-
-    # 判斷子彈 v.s. 敵人的碰撞
-    hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
-    for hit in hits:
-        hit.health -= 20
-        if hit.health <= 0:
-            expl = Explosion(hit.rect.center, 'lg')
-            all_sprites.add(expl)
-            hit.kill()
-
-    if player.lives == 0:
-        if not death_expl.alive():
-            show_game_over(screen)
-            show_init = True
+    if player.lives == 0 and not death_expl.alive():
+        show_game_over(screen)
+        show_init = True
 
     # 畫面顯示
     screen.fill(BLACK)
@@ -592,10 +565,11 @@ while running:
         entity.draw(screen) if hasattr(entity, 'draw') else screen.blit(entity.image, entity.rect)
     for entity in enemies:
         screen.blit(entity.image, entity.rect)
+        entity.draw_health(screen, entity.health, 100, entity.rect.x, entity.rect.y - 15, 60, 10, RED)
     for bullet in e_bullets:
         screen.blit(bullet.image, bullet.rect)
     draw_text(screen, str(score), 18, WIDTH/2, 10)
-    draw_health(screen, player.health, 5, 15)
+    player.draw_health(screen, player.health, 100, 5, 15, 100, 10, GREEN)
     draw_lives(screen, player.lives, player_mini_img, WIDTH - 100, 15)
     pygame.display.update()
 
