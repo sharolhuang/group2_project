@@ -180,6 +180,18 @@ def handle_player_power_collision(player, power):
     elif power.type == 'snowflower':
         player.hit_snowflower()
 
+def handle_player_enemy_bullet_collision(player, bullet):
+    if not player.invulnerable:
+        player.health -= 20
+        if player.health <= 0:
+            death_expl = Explosion(player.rect.center, 'player')
+            all_sprites.add(death_expl)
+            die_sound.play()
+            player.lives -= 1
+            player.health = 100
+            player.hide()
+            player.gun = 1
+
 def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
     hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
     for sprite1 in hits:
@@ -547,18 +559,7 @@ while running:
         score += hit.value
 
     # 判斷敵人子彈 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, e_bullets, True)
-    for hit in hits:
-        if not player.invulnerable:
-            player.health -= 20
-            if player.health <= 0:
-                death_expl = Explosion(player.rect.center, 'player')
-                all_sprites.add(death_expl)
-                die_sound.play()
-                player.lives -= 1
-                player.health = 100
-                player.hide()
-            player.gun = 1
+    handle_collision_single_with_group(player, e_bullets, True, handle_player_enemy_bullet_collision)
 
     # 判斷子彈 v.s. 敵人的碰撞
     handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
@@ -576,7 +577,6 @@ while running:
     for entity in enemies:
         screen.blit(entity.image, entity.rect)
         entity.draw_health(screen, entity.health, 100, entity.rect.x, entity.rect.y - 15, 60, 10, RED)
-
     for bullet in e_bullets:
         screen.blit(bullet.image, bullet.rect)
     draw_text(screen, str(score), 18, WIDTH/2, 10)
