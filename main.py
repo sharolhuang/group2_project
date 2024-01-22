@@ -149,10 +149,10 @@ def spawn_power(powers, all_sprites):
         powers.add(new_power)
         all_sprites.add(new_power)
 
-def handle_collision_group(sprite, group, dokill, action):
-    hits = pygame.sprite.spritecollide(sprite, group, dokill)
+def handle_collision_single_with_group(single, group, dokill, collision_handler):
+    hits = pygame.sprite.spritecollide(single, group, dokill)
     for hit in hits:
-        action(sprite, hit)
+        collision_handler(single, hit)
 
 def handle_rock_player_collision(player, rock):
     new_rock()
@@ -167,6 +167,20 @@ def handle_rock_player_collision(player, rock):
         player.health = 100
         player.hide()
     player.gun = 1
+
+def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
+    hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
+    for hit in hits:
+        for bullet in hits[hit]:
+            collision_handler(hit, bullet)
+
+
+def handle_bullet_enemy_collision(bullet, enemy):
+    enemy.health -= 20
+    if enemy.health <= 0:
+        explosion = Explosion(enemy.rect.center, 'lg')
+        all_sprites.add(explosion)
+        enemy.kill()
 
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_path, center, image_scale=None, color_key=None):
@@ -510,7 +524,7 @@ while running:
 
     # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
-        handle_collision_group(player, rocks, True, handle_rock_player_collision)
+        handle_collision_single_with_group(player, rocks, True, handle_rock_player_collision)
 
     # 判斷寶物 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, powers, True)
@@ -547,15 +561,8 @@ while running:
                 player.hide()
             player.gun = 1
 
-
     # 判斷子彈 v.s. 敵人的碰撞
-    hits = pygame.sprite.groupcollide(enemies, bullets, False, True)
-    for hit in hits:
-        hit.health -= 20
-        if hit.health <= 0:
-            expl = Explosion(hit.rect.center, 'lg')
-            all_sprites.add(expl)
-            hit.kill()
+    handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
 
     if player.lives == 0:
         if not death_expl.alive():
