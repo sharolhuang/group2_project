@@ -141,6 +141,25 @@ def show_game_over(screen):
             if event.type == pygame.KEYDOWN:
                 waiting = False
 
+def spawn_enemies(score, enemies, all_sprites):
+    if score >= 1500 and score < 3000 and len(enemies) == 0:
+        enemies.add(Enemy(80, 60, moving=False), Enemy(320, 60, moving=False))
+    elif score >= 3000 and len(enemies) < 2:
+        if len(enemies) == 0:
+            enemies.add(Enemy(0, 60, moving=True), Enemy(WIDTH - 60, 60, moving=True))
+        elif len(enemies) == 1:
+            x_pos = WIDTH - 60 if enemies.sprites()[0].rect.x < WIDTH / 2 else 0
+            enemies.add(Enemy(x_pos, 60, moving=True))
+    for enemy in enemies:
+        if enemy not in all_sprites:
+            all_sprites.add(enemy)
+
+def spawn_power(powers, all_sprites):
+    if random.random() < 0.01:  # 1% 機率生成 Power
+        new_power = Power((random.randint(0, WIDTH), -20))
+        powers.add(new_power)
+        all_sprites.add(new_power)
+
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_path, center, image_scale=None, color_key=None):
         pygame.sprite.Sprite.__init__(self)
@@ -460,6 +479,7 @@ while running:
         rocks = pygame.sprite.Group()
         bullets = pygame.sprite.Group()
         powers = pygame.sprite.Group()
+        enemies = pygame.sprite.Group()
         player = Player()
         all_sprites.add(player)
         for i in range(8):
@@ -467,39 +487,9 @@ while running:
         score = 0
 
     clock.tick(FPS)
-    
-    if random.random() < 0.01:  # 生成一個 Power 的機率為 1%
-        new_power = Power((random.randint(0, WIDTH), -20))
-        all_sprites.add(new_power)
-        powers.add(new_power)
-    
-    if score >= 1500 and score < 3000 and len(enemies) == 0:
-        enemy1 = Enemy(80, 60, moving=False)
-        enemy2 = Enemy(320, 60, moving=False)
-        all_sprites.add(enemy1)
-        all_sprites.add(enemy2)
-        enemies.add(enemy1)
-        enemies.add(enemy2)
 
-    if score >= 3000 and len(enemies) < 2:
-        if len(enemies) == 0:  # 如果目前沒有敵人，則創建兩個敵人
-            enemy1 = Enemy(0, 60, moving=True)  # 從左邊開始向右移動
-            enemy2 = Enemy(WIDTH - 60, 60, moving=True)  # 從右邊開始向左移動
-            enemy2.speedx = -2  # 設置第二個敵人的移動方向為向左
-            all_sprites.add(enemy1)
-            all_sprites.add(enemy2)
-            enemies.add(enemy1)
-            enemies.add(enemy2)
-        elif len(enemies) == 1:  # 如果目前只有一個敵人
-            # 創建另一個敵人，至於從左或從右取決於現有敵人的位置
-            existing_enemy = enemies.sprites()[0]
-            if existing_enemy.rect.x < WIDTH / 2:  # 現有敵人在左邊
-                enemy = Enemy(WIDTH - 60, 60, moving=True)
-                enemy.speedx = -2
-            else:  # 現有敵人在右邊
-                enemy = Enemy(0, 60, moving=True)
-            all_sprites.add(enemy)
-            enemies.add(enemy)
+    spawn_power(powers, all_sprites)
+    spawn_enemies(score, enemies, all_sprites)
             
     # 取得輸入
     for event in pygame.event.get():
