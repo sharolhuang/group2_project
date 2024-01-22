@@ -90,17 +90,6 @@ def new_rock():
     all_sprites.add(r)
     rocks.add(r)
 
-def draw_health(surf, hp, x, y):
-    if hp < 0:
-        hp = 0
-    BAR_LENGTH = 100
-    BAR_HEIGHT = 10
-    fill = (hp/100)*BAR_LENGTH
-    outline_rect = pygame.Rect(x, y, BAR_LENGTH, BAR_HEIGHT)
-    fill_rect = pygame.Rect(x, y, fill, BAR_HEIGHT)
-    pygame.draw.rect(surf, GREEN, fill_rect)
-    pygame.draw.rect(surf, WHITE, outline_rect, 2)
-
 def draw_lives(surf, lives, img, x, y):
     for i in range(lives):
         img_rect = img.get_rect()
@@ -175,21 +164,18 @@ class GameObject(pygame.sprite.Sprite):
         surf.blit(self.image, self.rect)
 
     def move(self, speedx, speedy):
-        """通用移動方法，如果適用的話"""
         self.rect.x += speedx
         self.rect.y += speedy
 
     def off_screen_kill(self):
-        """如果物件移出屏幕，則自動消除"""
         if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
             self.kill()
 
-    def draw_health(self, surf, hp, max_hp, bar_length, bar_height, x_offset=0, y_offset=0):
-        """繪製生命條"""
+    def draw_health(self, surf, hp, max_hp, x, y, bar_length, bar_height, bar_color):
         fill = (hp / max_hp) * bar_length
-        outline_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, bar_length, bar_height)
-        fill_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, fill, bar_height)
-        pygame.draw.rect(surf, GREEN, fill_rect)
+        outline_rect = pygame.Rect(x, y, bar_length, bar_height)
+        fill_rect = pygame.Rect(x, y, fill, bar_height)
+        pygame.draw.rect(surf, bar_color, fill_rect)
         pygame.draw.rect(surf, WHITE, outline_rect, 2)
 
 class Player(GameObject):
@@ -439,20 +425,6 @@ class Enemy(GameObject):
         all_sprites.add(bullet)
         e_bullets.add(bullet)
 
-    def draw_health(self, surf):
-        if self.health > 0:
-            BAR_LENGTH = 60
-            BAR_HEIGHT = 10
-            fill = (self.health / 100) * BAR_LENGTH
-            outline_rect = pygame.Rect(self.rect.x, self.rect.y - 15, BAR_LENGTH, BAR_HEIGHT)
-            fill_rect = pygame.Rect(self.rect.x, self.rect.y - 15, fill, BAR_HEIGHT)
-            pygame.draw.rect(surf, RED, fill_rect)
-            pygame.draw.rect(surf, WHITE, outline_rect, 2)
-    
-    def draw(self, surf):
-        surf.blit(self.image, self.rect)
-        self.draw_health(surf)
-
 class EnemyBullet(GameObject):
     def __init__(self, x, y):
         image_path = os.path.join("img", "e_bullet.png")
@@ -592,10 +564,12 @@ while running:
         entity.draw(screen) if hasattr(entity, 'draw') else screen.blit(entity.image, entity.rect)
     for entity in enemies:
         screen.blit(entity.image, entity.rect)
+        entity.draw_health(screen, entity.health, 100, entity.rect.x, entity.rect.y - 15, 60, 10, RED)
+
     for bullet in e_bullets:
         screen.blit(bullet.image, bullet.rect)
     draw_text(screen, str(score), 18, WIDTH/2, 10)
-    draw_health(screen, player.health, 5, 15)
+    player.draw_health(screen, player.health, 100, 5, 15, 100, 10, GREEN)
     draw_lives(screen, player.lives, player_mini_img, WIDTH - 100, 15)
     pygame.display.update()
 
