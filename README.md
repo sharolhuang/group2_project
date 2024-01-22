@@ -5,7 +5,7 @@
 keys for lateral movement.
 #### • Shooting Mechanics: Use the space bar to fire bullets at
 enemies and asteroids.
-####• Objective: The primary goal is to survive by avoiding or
+#### • Objective: The primary goal is to survive by avoiding or
 destroying asteroids and enemy ships.
 ### Power-Ups and Scoring:
 #### • Collecting Power-Ups: Various power-ups appear ran-
