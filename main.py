@@ -116,6 +116,10 @@ def draw_init():
                 waiting = False
                 return False
 
+def off_screen_kill(sprite, width, height):
+    if sprite.rect.top > height or sprite.rect.bottom < 0 or sprite.rect.right < 0 or sprite.rect.left > width:
+        sprite.kill()
+
 def show_game_over(screen):
     screen.blit(background_img, (0, 0))
     draw_text(screen, "GAME OVER", 64, WIDTH / 2, HEIGHT / 4)
@@ -236,10 +240,6 @@ class GameObject(pygame.sprite.Sprite):
     def move(self, speedx, speedy):
         self.rect.x += speedx
         self.rect.y += speedy
-
-    def off_screen_kill(self):
-        if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
-            self.kill()
 
     def draw_health(self, surf, hp, max_hp, x, y, bar_length, bar_height, bar_color):
         fill = (hp / max_hp) * bar_length
@@ -402,7 +402,7 @@ class Rock(GameObject):
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(2, 10)
             self.speedx = random.randrange(-3, 3)
-
+    
 class Bullet(GameObject):
     def __init__(self, x, y):
         image_path = os.path.join("img", "bullet.png")
@@ -412,7 +412,7 @@ class Bullet(GameObject):
 
     def update(self):
         self.rect.y += self.speedy
-        self.off_screen_kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center, size):
@@ -450,8 +450,7 @@ class Power(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class ScoreNumber(pygame.sprite.Sprite):
     def __init__(self, x, y, value):
@@ -465,8 +464,7 @@ class ScoreNumber(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class Enemy(GameObject):
     def __init__(self, x, y, moving=False):
@@ -504,7 +502,7 @@ class EnemyBullet(GameObject):
 
     def update(self):
         self.rect.y += self.speedy
-        self.off_screen_kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 pygame.mixer.music.play(-1)
 
