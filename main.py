@@ -192,6 +192,10 @@ def handle_player_enemy_bullet_collision(player, bullet):
             player.hide()
             player.gun = 1
 
+def handle_player_score_number_collision(player, score_number):
+    global score
+    score += score_number.value
+
 def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
     hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
     for sprite1 in hits:
@@ -543,25 +547,12 @@ while running:
     score_numbers.update()
     enemies.update()
     e_bullets.update()
-    # 判斷石頭 v.s. 子彈的碰撞
-    handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
-
-    # 判斷石頭 v.s. 飛船的碰撞
     if not player.invulnerable:
         handle_collision_single_with_group(player, rocks, True, handle_rock_player_collision)
-
-    # 判斷寶物 v.s. 飛船的碰撞
     handle_collision_single_with_group(player, powers, True, handle_player_power_collision)
-
-    # 判斷分數 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, score_numbers, True)
-    for hit in hits:
-        score += hit.value
-
-    # 判斷敵人子彈 v.s. 飛船的碰撞
+    handle_collision_single_with_group(player, score_numbers, True, handle_player_score_number_collision)
     handle_collision_single_with_group(player, e_bullets, True, handle_player_enemy_bullet_collision)
-
-    # 判斷子彈 v.s. 敵人的碰撞
+    handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
     handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
 
     if player.lives == 0:
