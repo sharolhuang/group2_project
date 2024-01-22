@@ -155,12 +155,29 @@ class GameObject(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, self.rect)
 
+    def move(self, speedx, speedy):
+        """通用移動方法，如果適用的話"""
+        self.rect.x += speedx
+        self.rect.y += speedy
+
+    def off_screen_kill(self):
+        """如果物件移出屏幕，則自動消除"""
+        if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
+            self.kill()
+
+    def draw_health(self, surf, hp, max_hp, bar_length, bar_height, x_offset=0, y_offset=0):
+        """繪製生命條"""
+        fill = (hp / max_hp) * bar_length
+        outline_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, bar_length, bar_height)
+        fill_rect = pygame.Rect(self.rect.x + x_offset, self.rect.y + y_offset, fill, bar_height)
+        pygame.draw.rect(surf, GREEN, fill_rect)
+        pygame.draw.rect(surf, WHITE, outline_rect, 2)
+
 class Player(GameObject):
     def __init__(self):
         image_path = os.path.join("img", "player.png")
         center = (WIDTH / 2, HEIGHT - 25)
         super().__init__(image_path, center, image_scale=(50, 38), color_key=BLACK)
-        
         self.radius = 20
         self.speedx = 8
         self.health = 100
@@ -282,7 +299,6 @@ class Rock(GameObject):
         image_path = random.choice([os.path.join("img", f"rock{i}.png") for i in range(7)])
         center = (random.randrange(0, WIDTH), random.randrange(-180, -100))
         super().__init__(image_path, center, color_key=BLACK)
-
         self.radius = int(self.rect.width * 0.85 / 2)
         self.original_speedy = random.randrange(2, 5)  # 原始速度
         self.speedy = self.original_speedy
@@ -315,15 +331,13 @@ class Rock(GameObject):
 class Bullet(GameObject):
     def __init__(self, x, y):
         image_path = os.path.join("img", "bullet.png")
-        center = (x, y)
-        super().__init__(image_path, center, color_key=BLACK)
+        super().__init__(image_path, (x, y), color_key=BLACK)
         self.rect.bottom = y
         self.speedy = -10
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.bottom < 0:
-            self.kill()
+        self.off_screen_kill()
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center, size):
@@ -429,8 +443,7 @@ class EnemyBullet(GameObject):
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        self.off_screen_kill()
 
 pygame.mixer.music.play(-1)
 
