@@ -149,6 +149,17 @@ def spawn_power(powers, all_sprites):
         powers.add(new_power)
         all_sprites.add(new_power)
 
+def handle_player_death():
+    global death_expl, player
+    if death_expl is None or not death_expl.alive():
+        death_expl = Explosion(player.rect.center, 'player')
+        all_sprites.add(death_expl)
+    die_sound.play()
+    player.lives -= 1
+    player.health = 100
+    player.hide()
+    player.gun = 1
+
 def handle_collision_single_with_group(single, group, dokill, collision_handler):
     hits = pygame.sprite.spritecollide(single, group, dokill)
     for hit in hits:
@@ -160,13 +171,7 @@ def handle_rock_player_collision(player, rock):
     explosion = Explosion(rock.rect.center, 'sm')
     all_sprites.add(explosion)
     if player.health <= 0:
-        death_expl = Explosion(player.rect.center, 'player')
-        all_sprites.add(death_expl)
-        die_sound.play()
-        player.lives -= 1
-        player.health = 100
-        player.hide()
-    player.gun = 1
+        handle_player_death()
 
 def handle_player_power_collision(player, power):
     if power.type == 'heart':
@@ -184,13 +189,7 @@ def handle_player_enemy_bullet_collision(player, bullet):
     if not player.invulnerable:
         player.health -= 20
         if player.health <= 0:
-            death_expl = Explosion(player.rect.center, 'player')
-            all_sprites.add(death_expl)
-            die_sound.play()
-            player.lives -= 1
-            player.health = 100
-            player.hide()
-            player.gun = 1
+            handle_player_death()
 
 def handle_player_score_number_collision(player, score_number):
     global score
@@ -555,10 +554,9 @@ while running:
     handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
     handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
 
-    if player.lives == 0:
-        if not death_expl.alive():
-            show_game_over(screen)
-            show_init = True
+    if player.lives == 0 and not death_expl.alive():
+        show_game_over(screen)
+        show_init = True
 
     # 畫面顯示
     screen.fill(BLACK)
