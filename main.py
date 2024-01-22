@@ -38,17 +38,17 @@ enemy_img = pygame.image.load(os.path.join("img", "enemy.png")).convert_alpha()
 
 rock_imgs = []
 for i in range(7):
-    rock_imgs.append(pygame.image.load(os.path.join("img", f"rock{i}.png")).convert())
+    rock_imgs.append(load_image(f"rock{i}.png"))
 expl_anim = {}
 expl_anim['lg'] = []
 expl_anim['sm'] = []
 expl_anim['player'] = []
 for i in range(9):
-    expl_img = pygame.image.load(os.path.join("img", f"expl{i}.png")).convert()
+    expl_img = load_image(f"expl{i}.png")
     expl_img.set_colorkey(BLACK)
     expl_anim['lg'].append(pygame.transform.scale(expl_img, (75, 75)))
     expl_anim['sm'].append(pygame.transform.scale(expl_img, (30, 30)))
-    player_expl_img = pygame.image.load(os.path.join("img", f"player_expl{i}.png")).convert()
+    player_expl_img = load_image(f"player_expl{i}.png")
     player_expl_img.set_colorkey(BLACK)
     expl_anim['player'].append(player_expl_img)
 power_imgs = {}
