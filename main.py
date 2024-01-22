@@ -168,6 +168,18 @@ def handle_rock_player_collision(player, rock):
         player.hide()
     player.gun = 1
 
+def handle_player_power_collision(player, power):
+    if power.type == 'heart':
+        player.health += 20
+        if player.health > 100:
+            player.health = 100
+    elif power.type == 'gun':
+        player.upgrade_gun()
+    elif power.type == 'shield':
+        player.set_invulnerable()
+    elif power.type == 'snowflower':
+        player.hit_snowflower()
+
 def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
     hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
     for sprite1 in hits:
@@ -527,20 +539,7 @@ while running:
         handle_collision_single_with_group(player, rocks, True, handle_rock_player_collision)
 
     # 判斷寶物 v.s. 飛船的碰撞
-    hits = pygame.sprite.spritecollide(player, powers, True)
-    for hit in hits:
-        if hit.type == 'heart':
-            player.health += 20
-            if player.health > 100:
-                player.health = 100
-            shield_sound.play()
-        elif hit.type == 'gun':
-            player.upgrade_gun()
-            gun_sound.play()
-        elif hit.type == 'shield':
-            player.set_invulnerable()
-        elif hit.type == 'snowflower':
-            player.hit_snowflower()
+    handle_collision_single_with_group(player, powers, True, handle_player_power_collision)
 
     # 判斷分數 v.s. 飛船的碰撞
     hits = pygame.sprite.spritecollide(player, score_numbers, True)
