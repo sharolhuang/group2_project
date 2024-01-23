@@ -116,6 +116,10 @@ def draw_init():
                 waiting = False
                 return False
 
+def off_screen_kill(sprite, width, height):
+    if sprite.rect.top > height or sprite.rect.bottom < 0 or sprite.rect.right < 0 or sprite.rect.left > width:
+        sprite.kill()
+
 def show_game_over(screen):
     screen.blit(background_img, (0, 0))
     draw_text(screen, "GAME OVER", 64, WIDTH / 2, HEIGHT / 4)
@@ -149,7 +153,7 @@ def spawn_power(powers, all_sprites):
         powers.add(new_power)
         all_sprites.add(new_power)
 
-def handle_player_death():
+def player_death():
     global death_expl, player
     if death_expl is None or not death_expl.alive():
         death_expl = Explosion(player.rect.center, 'player')
@@ -160,20 +164,20 @@ def handle_player_death():
     player.hide()
     player.gun = 1
 
-def handle_collision_single_with_group(single, group, dokill, collision_handler):
+def collision_single_with_group(single, group, dokill, collision_handler):
     hits = pygame.sprite.spritecollide(single, group, dokill)
     for hit in hits:
         collision_handler(single, hit)
 
-def handle_rock_player_collision(player, rock):
+def rock_player_collision(player, rock):
     new_rock()
     player.health -= rock.radius * 2
     explosion = Explosion(rock.rect.center, 'sm')
     all_sprites.add(explosion)
     if player.health <= 0:
-        handle_player_death()
+        player_death()
 
-def handle_player_power_collision(player, power):
+def player_power_collision(player, power):
     if power.type == 'heart':
         player.health += 20
         if player.health > 100:
@@ -185,30 +189,30 @@ def handle_player_power_collision(player, power):
     elif power.type == 'snowflower':
         player.hit_snowflower()
 
-def handle_player_enemy_bullet_collision(player, bullet):
+def player_e_bullet_collision(player, bullet):
     if not player.invulnerable:
         player.health -= 20
         if player.health <= 0:
-            handle_player_death()
+            player_death()
 
-def handle_player_score_number_collision(player, score_number):
+def player_scorenumber_collision(player, score_number):
     global score
     score += score_number.value
 
-def handle_collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
+def collision_between_groups(group1, group2, dokill1, dokill2, collision_handler):
     hits = pygame.sprite.groupcollide(group1, group2, dokill1, dokill2)
     for sprite1 in hits:
         for sprite2 in hits[sprite1]:
             collision_handler(sprite1, sprite2)
 
-def handle_bullet_enemy_collision(enemy, bullet):
+def bullet_enemy_collision(enemy, bullet):
     enemy.health -= 20
     if enemy.health <= 0:
         expl = Explosion(enemy.rect.center, 'lg')
         all_sprites.add(expl)
         enemy.kill()
 
-def handle_rock_bullet_collision(rock, bullet):
+def rock_bullet_collision(rock, bullet):
     random.choice(expl_sounds).play()
     expl = Explosion(rock.rect.center, 'lg')
     all_sprites.add(expl)
@@ -236,10 +240,6 @@ class GameObject(pygame.sprite.Sprite):
     def move(self, speedx, speedy):
         self.rect.x += speedx
         self.rect.y += speedy
-
-    def off_screen_kill(self):
-        if self.rect.top > HEIGHT or self.rect.bottom < 0 or self.rect.right < 0 or self.rect.left > WIDTH:
-            self.kill()
 
     def draw_health(self, surf, hp, max_hp, x, y, bar_length, bar_height, bar_color):
         fill = (hp / max_hp) * bar_length
@@ -402,7 +402,7 @@ class Rock(GameObject):
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(2, 10)
             self.speedx = random.randrange(-3, 3)
-
+    
 class Bullet(GameObject):
     def __init__(self, x, y):
         image_path = os.path.join("img", "bullet.png")
@@ -412,7 +412,7 @@ class Bullet(GameObject):
 
     def update(self):
         self.rect.y += self.speedy
-        self.off_screen_kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center, size):
@@ -450,8 +450,7 @@ class Power(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class ScoreNumber(pygame.sprite.Sprite):
     def __init__(self, x, y, value):
@@ -465,8 +464,7 @@ class ScoreNumber(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.y += self.speedy
-        if self.rect.top > HEIGHT:
-            self.kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 class Enemy(GameObject):
     def __init__(self, x, y, moving=False):
@@ -504,7 +502,7 @@ class EnemyBullet(GameObject):
 
     def update(self):
         self.rect.y += self.speedy
-        self.off_screen_kill()
+        off_screen_kill(self, WIDTH, HEIGHT)
 
 pygame.mixer.music.play(-1)
 
@@ -547,12 +545,12 @@ while running:
     enemies.update()
     e_bullets.update()
     if not player.invulnerable:
-        handle_collision_single_with_group(player, rocks, True, handle_rock_player_collision)
-    handle_collision_single_with_group(player, powers, True, handle_player_power_collision)
-    handle_collision_single_with_group(player, score_numbers, True, handle_player_score_number_collision)
-    handle_collision_single_with_group(player, e_bullets, True, handle_player_enemy_bullet_collision)
-    handle_collision_between_groups(rocks, bullets, True, True, handle_rock_bullet_collision)
-    handle_collision_between_groups(enemies, bullets, False, True, handle_bullet_enemy_collision)
+        collision_single_with_group(player, rocks, True, rock_player_collision)
+    collision_single_with_group(player, powers, True, player_power_collision)
+    collision_single_with_group(player, score_numbers, True, player_scorenumber_collision)
+    collision_single_with_group(player, e_bullets, True, player_e_bullet_collision)
+    collision_between_groups(rocks, bullets, True, True, rock_bullet_collision)
+    collision_between_groups(enemies, bullets, False, True, bullet_enemy_collision)
 
     if player.lives == 0 and not death_expl.alive():
         show_game_over(screen)
