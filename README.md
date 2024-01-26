@@ -4,8 +4,23 @@
 Space Survival War is an engaging arcade-style game developed with Python and Pygame. Players control a spaceship, navigating through space, dodging asteroids, battling enemy ships, and collecting power-ups.
 
 ## Installation
-- Prerequisites: Python, Pygame.
-- Installation Steps: Clone the repository, install Pygame, and run `main.py`.
+
+To play Space Survival War, you need to have Python and Pygame installed on your computer. Follow these steps to set up the game:
+
+1. **Install Python**:
+   - Download and install Python from [python.org](https://www.python.org/downloads/).
+   - Ensure Python is added to your system's PATH.
+
+2. **Install Pygame**:
+   - Open a command prompt or terminal.
+   - Run the command: `pip install pygame`.
+
+3. **Download the Game**:
+   - Clone or download the game repository from GitHub.
+
+4. **Run the Game**:
+   - Navigate to the downloaded game directory.
+   - Run `main.py` using Python.
 
 ## Gameplay
 - **Controls**: Use arrow keys for navigation, spacebar to shoot.
