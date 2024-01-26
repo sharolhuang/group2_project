@@ -72,12 +72,25 @@ collision_single_with_group(player, rocks, True, rock_player_collision)
 This code snippet shows how to detect collisions between a single sprite and a group of sprites (like detecting when the player collides with rocks). The `collision_single_with_group` function takes a sprite, a group, and a collision handler function to process the collision.
 
 ## Troubleshooting/FAQ
-- 
+1. **Installation Issues**: Ensure Python and Pygame are correctly installed. Verify Python version compatibility.
+2. **Game Crashes**: Check for error messages in the console. Ensure all game assets (images, sounds) are correctly placed in their respective directories.
+3. **Sound Problems**: Verify the sound files are correctly loaded and the system volume is not muted.
+
 ## Development Notes
-- 
+- **Design Choices**: Chose Pygame for its simplicity and suitability for 2D games.
+- **Challenges Faced**: Implementing smooth movement and collision detection.
+- **Solutions**: Utilized Pygame's sprite and collision modules, and optimized game loop for better performance.
+
 ## Future Enhancements
-- 
+- **New Levels**: Adding levels with increasing difficulty.
+- **Multiplayer Mode**: Implementing a multiplayer feature.
+- **Customization**: Allowing players to customize spaceship appearances.
+- **Open Areas for Contribution**: Suggestions for new features or enhancements are welcome.
+
 ## Contribution Guidelines
-- 
+1. **How to Contribute**: Fork the repository, make changes, and submit a pull request.
+2. **Coding Standards**: Follow PEP 8 guidelines for Python code.
+3. **Pull Request Process**: Clearly describe the changes and their purpose. Ensure that your code has been tested.
+
 ## License
 - No license.
